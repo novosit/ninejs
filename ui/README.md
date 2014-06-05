@@ -23,6 +23,8 @@ A widget is an UI component that can be attached to a parent node/component and 
 This component extends `Properties` so you can have all features of this module as well. 
 
 Widgets are event aware and have a simple life cycle: Basically after construction you need to cal `show()` method in order to have the `domNode`. `show()` then calls `updateSkin()` and the later calls `onUpdatedSkin()`. This last method is where you can put all logic that requires the `domNode` to be present (i.e.: attach child widgets, or register event handlers).
+
+When you are done with the widget you can call `destroy()` and it will detach all children and call destroy on each one. Also all event handlers are removed from the widget DOM.
   
 ### `show()` Activity Diagram ###
 ![show activity diagram](docs/Ninejs_UI_Widget_01.png?raw=true "show activity diagram")
