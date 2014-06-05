@@ -20,7 +20,7 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 			for (cnt = 0; cnt < len; cnt += 1) {
 				this.$njsChildWidgets[cnt].destroy();
 			}
-			len = this.$njsEventListenerHandlers.length
+			len = this.$njsEventListenerHandlers.length;
 			this.remove();
 			for (cnt = 0; cnt < len; cnt += 1) {
 				this.$njsEventListenerHandlers[cnt].remove();
@@ -50,9 +50,10 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 		},
 		/**
 		 * Sets the new Skin. If value is a string just returns loadSkin(value); otherwise the following checks are performed:
-		 * If this widget has a skinContract; then every function and property of the current skinContract must have a match on the new skin. If one function or property is not found then an error is thrown.
+		 * If this widget has a skinContract; then every function and property of the current skinContract must have a match on the new skin.
 		 * @param  {string|promise|object} value New skin
 		 * @return {object}       A promise (if loadSkin() was called); or the actual skin value (object or string)
+		 * @throws {Error} If one function or property is not found
 		 */
 		skinSetter: function (value) {
 			if (typeof(value) === 'string') {
@@ -139,6 +140,17 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				});
 			}
 		},
+		/**
+		 * If the current skin is a single object (not an array) and it applies (skin.applies() is true) then is cosindered the current option to be applied.
+		 * 
+		 * If the current skin is an array then all elements are checked to see if any one applies, the first one that applies is considered the one to be applied.
+		 *
+		 * If some skin was selected to be applied and is different from the currentSkin the following steps are performed:
+		 * (1) If currentSkin is defined an 'updatingSkin' event is emitted; and all other skins (the ones that did not apply) are disabled.
+		 * (2) A promise is built using skin.enable().
+		 * 
+		 * @return {promise} A promise that gets resoved when skin.enable(); after that the new skin is assigned to currentSkin and onUpdatedSkin() gets called.
+		 */
 		updateSkin: function () {
 			var self = this;
 			return def.when(this.skin, function () {
@@ -173,6 +185,10 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				}
 			});
 		},
+		/**
+		 * Calls update over the currentSkin and then emits an 'updatedSkin' event without data.
+		 * @return {undefined}
+		 */
 		onUpdatedSkin: function () {
 			var self = this;
 			this.currentSkin.updated(this);
@@ -180,6 +196,11 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				self.emit('updatedSkin', {});
 			}, 10);
 		},
+		/**
+		 * If currentSkin is defined it gets disabled.
+		 * After that currentSkin is set to null and updateSkin() is called.
+		 * @return {object} same as updateSkin()
+		 */
 		forceUpdateSkin: function() {
 			if (this.currentSkin) {
 				this.currentSkin.disable();
@@ -200,6 +221,10 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 			});
 			return defer.promise;
 		},
+		/**
+		 * Adds all arguments to the Event Listener Handlers list. This list is later used when destroying the widget to call remove over all handlers.
+		 * @return {undefined}
+		 */
 		own: function () {
 			var cnt,
 				len = arguments.length;
@@ -207,6 +232,12 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				this.$njsEventListenerHandlers.push(arguments[cnt]);
 			}
 		},
+		/**
+		 * If the widged has a currentSkin then it is appended (as text or domNode) to the parent node.
+		 * If the widged does not have a skin yet, then a promise is returned that resolves when updateSkin() finished; at that point all event listeners are moved (for the old domNode) and attached to the new one. The node is appended to the parent node and a self referece is returned.
+		 * @param  {string|domNode} parentNode The id of the dom element, or the element itself
+		 * @return {object}            This widget or a promise 
+		 */
 		show: function (parentNode) {
 			var listeners,
 				current,
