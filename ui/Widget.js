@@ -9,6 +9,11 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 	}, 0);
 	var Widget = extend({
 		'$njsWidget': true,
+		/**
+		 * Calls destroy() on every registered child, and later removes all event listeners.
+		 * Extend this function in order to do any implementation specific destroy logic,like finalizing non-ninejs child components.
+		 * @return {undefined}
+		 */
 		destroy: function () {
 			var cnt,
 				len = this.$njsChildWidgets.length;
@@ -21,9 +26,20 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				this.$njsEventListenerHandlers[cnt].remove();
 			}
 		},
+		/**
+		 * Retisters a new child widget.
+		 * @param  {ninejs/ui/Widget} w the new child to be added.
+		 * @return {undefined}
+		 */
 		registerChildWidget: function (w) {
 			this.$njsChildWidgets.push(w);
 		},
+		/**
+		 * Remove this Widget from its parent, if this.domNode and this.domNode.parentNode are defined. Also emits a 'removing' event with an empty data.
+		 * This method is used during destroying sequence in order to detach child and parent widgets.
+		 * 
+		 * @return {boolean} true if the component was removed from its parent; false otherwise.
+		 */
 		remove: function () {
 			if (this.domNode && this.domNode.parentNode) {
 				this.emit('removing', {});
@@ -32,6 +48,12 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 			}
 			return false;
 		},
+		/**
+		 * Sets the new Skin. If value is a string just returns loadSkin(value); otherwise the following checks are performed:
+		 * If this widget has a skinContract; then every function and property of the current skinContract must have a match on the new skin. If one function or property is not found then an error is thrown.
+		 * @param  {string|promise|object} value New skin
+		 * @return {object}       A promise (if loadSkin() was called); or the actual skin value (object or string)
+		 */
 		skinSetter: function (value) {
 			if (typeof(value) === 'string') {
 				return this.loadSkin(value);
@@ -65,6 +87,12 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				throw new Error(err);
 			});
 		},
+		/**
+		 * Sets the given css class (or classes separated by space).
+		 * If the domNode exists the assigment is performed imnediately, otherwise is executed on the 'updateSkin' event (only once.)
+		 * @param  {string} v Single or space-separated list of CSS classes
+		 * @return {undefined}
+		 */
 		classSetter: function (v) {
 			var arg = v.split(' ');
 			arg.unshift(this.domNode);
@@ -77,6 +105,12 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				});
 			}
 		},
+		/**
+		 * Sets the given id to the domNoe.
+		 * If the domNode exists the assigment is performed imnediately, otherwise is executed on the 'updateSkin' event (only once.)
+		 * @param  {string} v dom id for this component
+		 * @return {undefined}
+		 */
 		idSetter: function (v) {
 			if (this.domNode) {
 				this.domNode.id = v;
@@ -88,6 +122,12 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				});
 			}
 		},
+		/**
+		 * Sets the given style to the domNode.
+		 * If the domNode exists the assigment is performed imnediately, otherwise is executed on the 'updateSkin' event (only once.)
+		 * @param  {object} v Style for widget's domNode
+		 * @return {undefined}
+		 */
 		styleSetter: function (v) {
 			if (this.domNode) {
 				this.domNode.style = v;
@@ -233,10 +273,22 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 
 			return r;
 		},
+		/**
+		 * Short hand for on.emit(this.domNode, type, data)
+		 * @param  {string} type Type of event/message being emitted
+		 * @param  {object} data Event/message data
+		 * @return {event|boolean}      TBD
+		 */
 		emit: function (type, data) {
 			return on.emit(this.domNode, type, data);
 		}
-	}, Properties, function () {
+	}, Properties,
+	/**
+	 * Sets default values for skin, skinContract,$njsEventListeners, $njsEventListenerHandlers, and $njsChildWidgets.
+	 * 
+	 * @return {undefined} 
+	 */
+	function () {
 		this.skin = this.skin || [];
 		this.skinContract = this.skinContract || [];
 		this.$njsEventListeners = {};
