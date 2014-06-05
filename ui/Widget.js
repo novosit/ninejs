@@ -187,6 +187,11 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 			this.currentSkin = null;
 			this.updateSkin();
 		},
+		/**
+		 * Wraps the skin within a promise and calls 'skin' setter. Then the module represented by 'name' is required and resolved to the actual value.
+		 * @param  {string} name Skin component AMD path
+		 * @return {promise}      The promise used to wraps the skin
+		 */
 		loadSkin: function(name) {
 			var defer = def.defer();
 			this.set('skin', defer.promise);
@@ -249,6 +254,14 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				return appendIt();
 			}
 		},
+		/**
+		 * Register a new handler for the given event. 
+		 * @param  {string} type         event type
+		 * @param  {function} action       new handler
+		 * @param  {boolean} persistEvent if true the action will be added to internal event listeners map and the handler to the event listeners handler list
+		 * @return {object}              A pointer to the new event handler
+		 * @throws {Error} If domNode is not defined
+		 */
 		on: function (type, action, persistEvent) {
 			var r,
 				self = this;
@@ -277,7 +290,7 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 		 * Short hand for on.emit(this.domNode, type, data)
 		 * @param  {string} type Type of event/message being emitted
 		 * @param  {object} data Event/message data
-		 * @return {event|boolean}      TBD
+		 * @return {undefined}
 		 */
 		emit: function (type, data) {
 			return on.emit(this.domNode, type, data);
