@@ -36,6 +36,10 @@ When you are done with the widget you can call `destroy()` and it will detach al
 <img src="docs/Ninejs_UI_Widget_03.png" width="50%" height="50%" title="postUpdateSkin() activity diagram" alt="postUpdateSkin() activity diagram"/>
 
 #### Sample Widget: `AccountInfo` ####
+Assumes that you need a Widget to capture/edit data related to some Account. You have the following data items Company Name (companyName), Account Responsible/holder (holderName), and Account Type (type). First of all you need to define an Skin with your markup and corresponding Attach Points and / or variables substitutions or Live Expressions (refer to `nineplate` to better understand this features). 
+
+The context of this example assumes that you have an skin (`skin/AccountInfo`) and that this skin is wired up to place the values of all data items.
+
     :::javascript
     define(['ninejs/core/extend', 'ninejs/ui/Widget', './skin/AccountInfo', './services/someService', 'dojo/on'], function (extend, Widget, defaultSkin, someService, on) {
     	'use strict';
