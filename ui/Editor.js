@@ -1,5 +1,5 @@
 /* global window */
- /**
+/**
  *
  * @author   Eduardo Burgos
  * @version  0.1
@@ -11,11 +11,14 @@
  * @return {ninejs/ui/Editor}   Returns a new Editor.
  * @constructor
  */
-define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/Default', '../core/deferredUtils', '../modernizer', '../core/array', './utils/setClass', '../core/objUtils', '../core/on', './utils/setText', './utils/append', '../config'], function (extend, Widget, Properties, defaultSkin, def, modernizer, array, setClass, objUtils, on, setText, append, config) {
+define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferredUtils', '../modernizer', '../core/array', './utils/setClass', '../core/objUtils', '../core/on', './utils/setText', './utils/append', '../config'], function (extend, Widget, defaultSkin, def, modernizer, array, setClass, objUtils, on, setText, append, config) {
 	'use strict';
 
 	var NumberTextBox,
+		numberTextBoxDefer,
+		timeTextBoxDefer,
 		DateTextBox,
+		dateTextBoxDefer,
 		CheckBox,
 		TextBox,
 		Select,
@@ -23,14 +26,16 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 		ControlBase,
 		numberTextBoxImpl = ((config.ui || {}).Editor || {}).NumberTextBox || 'dijit/form/NumberTextBox',
 		dateTextBoxImpl = ((config.ui || {}).Editor || {}).DateTextBox || 'dijit/form/DateTextBox',
+		timeTextBoxImpl = ((config.ui || {}).Editor || {}).TimeTextBox || 'dijit/form/TimeTextBox',
 		ENTER = 13;
-	ControlBase = extend(Properties, {
+	ControlBase = extend(Widget, {
 		on: function (type, act) {
-			//TODO: possible leak
-			on(this.domNode, type, act);
+			this.own(
+				on(this.domNode, type, act)
+			);
 		},
 		destroyRecursive: function () {
-
+			this.destroy();
 		},
 		startup: function () {
 
@@ -50,10 +55,13 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 			this.domNode.name = v;
 		}
 	}, function () {
-		var self = this;
-		on(this.domNode, 'change', function () {
-			self.set('value', self.domNode.value);
-		});
+		var self = this,
+			valueField = (this.domNode.type === 'checkbox') ? 'checked' : 'value';
+		this.own(
+			on(this.domNode, 'change', function () {
+				self.set('value', self.domNode[valueField]);
+			})
+		);
 		// on(this.domNode, 'blur', function(e){
 		// on.emit(self.domNode, 'blur', e);
 		// });
@@ -61,7 +69,13 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 	function getNumberTextBoxConstructor() {
 		var NumberTextBox;
 		if (!modernizer.inputtypes.number) {
-			NumberTextBox = require(numberTextBoxImpl);
+			numberTextBoxDefer = def.defer();
+			NumberTextBox = numberTextBoxDefer.promise;
+			require([numberTextBoxImpl], function (C) {
+				NumberTextBox = C;
+				numberTextBoxDefer.resolve(C);
+				numberTextBoxDefer = null;
+			});
 			if (!NumberTextBox) {
 				throw new Error('Implementation for NumberTextBox: ' + numberTextBoxImpl + ' must be previously loaded.');
 			}
@@ -94,9 +108,36 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 		}
 		return NumberTextBox;
 	}
+	function getTimeTextBoxConstructor() {
+		if (!modernizer.inputtypes.time) {
+			timeTextBoxDefer = def.defer();
+			TimeTextBox = timeTextBoxDefer.promise;
+			require([timeTextBoxImpl], function (C) {
+				TimeTextBox = C;
+				timeTextBoxDefer.resolve(C);
+				timeTextBoxDefer = null;
+			});
+			if (!TimeTextBox) {
+				throw new Error('Implementation for TimeTextBox: ' + timeTextBoxImpl + ' must be previously loaded.');
+			}
+		}
+		else {
+			TimeTextBox = extend(function () {
+				this.domNode = window.document.createElement('input');
+				this.domNode.type = 'time';
+			}, ControlBase);
+		}
+		return TimeTextBox;
+	}
 	NumberTextBox = getNumberTextBoxConstructor();
 	if (!modernizer.inputtypes.date) {
-		DateTextBox = require(dateTextBoxImpl);
+		dateTextBoxDefer = def.defer();
+		DateTextBox = dateTextBoxDefer.promise;
+		require([dateTextBoxImpl], function (C) {
+			DateTextBox = C;
+			dateTextBoxDefer.resolve(C);
+			dateTextBoxDefer = null;
+		});
 		if (!DateTextBox) {
 			throw new Error('Implementation for DateTextBox: ' + dateTextBoxImpl + ' must be previously loaded.');
 		}
@@ -149,10 +190,7 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 			}
 		}
 	});
-	TimeTextBox = extend(function () {
-		this.domNode = window.document.createElement('input');
-		this.domNode.type = 'time';
-	}, ControlBase);
+	TimeTextBox = getTimeTextBoxConstructor();
 
 	return Widget.extend({
 		skin: defaultSkin,
@@ -311,17 +349,19 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new NumberTextBoxControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function (e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(NumberTextBoxControl, function (NumberTextBoxControl) {
+					var control = new NumberTextBoxControl(args);
+					self.own(
+						on((control.domNode || control), 'blur', function (e) {
+							control.editor.emit('blur', e);
+						})
+					);
+					control.watch('value', function (name, old, newv) {
+						/* jshint unused: true */
+						self.set('value', newv, true);
+					});
+					return control;
 				});
-				return control;
 			};
 
 			buildDateTextBox = function () {
@@ -335,17 +375,19 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new DateTextBoxControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function (e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(DateTextBoxControl, function (DateTextBoxControl) {
+					var control = new DateTextBoxControl(args);
+					self.own(
+						on((control.domNode || control), 'blur', function (e) {
+							control.editor.emit('blur', e);
+						})
+					);
+					control.watch('value', function (name, old, newv) {
+						/* jshint unused: true */
+						self.set('value', newv, true);
+					});
+					return control;
 				});
-				return control;
 			};
 
 			buildTimeTextBox = function () {
@@ -359,17 +401,19 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new TimeTextBoxControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function(e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(TimeTextBoxControl, function (TimeTextBoxControl) {
+					var control = new TimeTextBoxControl(args);
+					self.own(
+						on((control.domNode || control), 'blur', function (e) {
+							control.editor.emit('blur', e);
+						})
+					);
+					control.watch('value', function (name, old, newv) {
+						/* jshint unused: true */
+						self.set('value', newv, true);
+					});
+					return control;
 				});
-				return control;
 			};
 
 			buildCheckBox = function () {
@@ -390,7 +434,7 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 						control.editor.emit('blur', e);
 					})
 				);
-				control.watch('checked', function (name, old, newv) {
+				control.watch('value', function (name, old, newv) {
 					/* jshint unused: true */
 					self.set('value', newv, true);
 				});
@@ -451,7 +495,12 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 			if (val && (val !== this.dataType)) {
 
 				if (this.control) {
-					this.control.destroyRecursive(false);
+					if (typeof (this.control.destroy) === 'function') {
+						this.control.destroy();
+					}
+					else if (typeof (this.control.destroyRecursive) === 'function') {
+						this.control.destroyRecursive(false);
+					}
 				}
 				this.control = null;
 				def.when(this._clearDataTypeClasses(), function () {
@@ -471,10 +520,12 @@ define(['../core/extend', './Widget', '../core/ext/Properties', './Skins/Editor/
 						'list' : buildSelect
 					};
 
-					self.control = controlMap[val].apply(self);
+					def.when(controlMap[val].apply(self), function (ctrl) {
+						self.control = ctrl;
 
-					self.control.startup();
-					append(self.domNode, self.control.domNode);
+						self.control.startup();
+						append(self.domNode, self.control.domNode);
+					});
 				});
 
 				this.dataType = val;

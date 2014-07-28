@@ -1,5 +1,6 @@
 /* global window */
-define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './hash', '../core/on', '../core/array', '../core/deferredUtils'], function(extend, Evented, Properties, hash, on, array, def) {
+define(['../core/array',
+	'../core/deferredUtils', '../core/ext/Evented', '../core/ext/Properties', '../core/extend', '../core/on', './hash'], function(array, def, Evented, Properties, extend, on, hash) {
 	'use strict';
 	var idMatch = /:(\w[\w\d]*)/g,
 		idReplacement = '([^\\/]+)',
@@ -7,6 +8,19 @@ define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './ha
 		globReplacement = '(.+)';
 	function nullf() {
 		return null;
+	}
+	function cleanRoute(r) {
+		if (r && r.length && (r.indexOf('#') === 0)) {
+			return r.substr(1);
+		}
+		return r;
+	}
+	function getRoute() {
+		var r = hash();
+		return cleanRoute(r);
+	}
+	function setRoute (route, replace) {
+		return hash(route, replace);
 	}
 	/*
 	* From Dojo Toolkit's router/RouterBase */
@@ -78,7 +92,7 @@ define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './ha
 		},
 		execute: function (args, evt) {
 			function rTrue() { return true; }
-			var initAction = this.action || this.initAction || rTrue,
+			var initAction = this.initAction || rTrue,
 				loadAction = this.loadAction || rTrue,
 				title = this.get('title'),
 				self = this;
@@ -129,12 +143,13 @@ define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './ha
 			return new Route(options, this);
 		},
 		go: function(/* String */ route, /* Boolean */ replace) {
-			var current = hash();
+			route = cleanRoute(route);
+			var current = getRoute();
 			if (current === route) {
 				this.dispatchRoute({ newURL: route, oldURL: '' });
 			}
 			else {
-				hash(route, replace);
+				setRoute(route, replace);
 			}
 		},
 		addRoute: function(route) {
@@ -164,10 +179,16 @@ define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './ha
 				lj,
 				idx,
 				newUrl;
+			evt.newURL = evt.newURL || getRoute();
 			newUrl = evt.newURL;
 			idx = newUrl.indexOf('#');
 			if (idx >= 0) {
 				newUrl = newUrl.substr(idx + 1);
+			}
+			function emitChanged () {
+				self.emit('9jsRouteChanged', {
+					newURL: newUrl
+				});
 			}
 			for (cnt = 0; cnt < len; cnt += 1) {
 				current = self.routes[cnt];
@@ -183,16 +204,32 @@ define(['../core/extend', '../core/ext/Evented', '../core/ext/Properties', './ha
 					} else {
 						params = result.slice(1);
 					}
-					current.execute(params, evt);
+					return def.when(current.execute(params, evt), emitChanged);
 				}
 			}
+			return null;
 		}
 	}, function () {
 		var self = this;
 		this.routes = [];
 		this.startup = function () {
 			this.hashHandler = on(window, 'hashchange', function(evt) {
-				self.dispatchRoute(evt);
+				var e = {
+					bubbles: evt.bubbles,
+					cancelable: evt.cancelable,
+					currentTarget: evt.currentTarget,
+					defaultPrevented: evt.defaultPrevented,
+					eventPhase: evt.eventPhase,
+					explicitOriginalTarget: evt.explicitOriginalTarget,
+					isTrusted: evt.isTrusted,
+					newURL: evt.newURL,
+					oldURL: evt.oldURL,
+					originalTarget: evt.originalTarget,
+					target: evt.target,
+					timeStamp: evt.timeStamp,
+					type: evt.type
+				};
+				self.dispatchRoute(e);
 			});
 		};
 	});

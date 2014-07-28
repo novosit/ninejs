@@ -66,6 +66,9 @@
 					}
 				}
 			}
+			function isAmdExtensionValue(v) {
+				return (v || '').indexOf('amd://') === 0;
+			}
 			/*
 			returns rendered code for the supplied xmlNode
 			@param {XmlNode} template - Nineplate's template object that we want to be compiled.
@@ -74,7 +77,8 @@
 				var attributes,
 					childNodes,
 					TextParseContext,
-					textParseContext;
+					textParseContext,
+					amdInstanceName;
 				function tryNewContext(action) {
 					var tempCtx = { mode: elementContext.mode };
 					action(tempCtx);
@@ -209,18 +213,18 @@
 						forIn.addAssignment(forIn.expression('temps').element(forIn.raw('p')), forIn.expression('context').element(forIn.raw('p')));
 						forIn.addAssignment(forIn.expression('context').element(forIn.raw('p')), forIn.expression('freeze').element(forIn.raw('p')));
 
-						innerWatch.addAssignment('t', innerWatch.expression(newFunctionName).invoke());
-						innerWatch.addStatement(
-							innerWatch
+						innerCondition.addAssignment('t', innerWatch.expression(newFunctionName).invoke());
+						innerCondition.addStatement(
+							innerCondition
 								.expression('freezeNode')
 								.member('parentNode')
 								.member('replaceChild')
 								.invoke(
-									innerWatch.expression('t'),
-									innerWatch.expression('freezeNode')
+									innerCondition.expression('t'),
+									innerCondition.expression('freezeNode')
 								)
 							);
-						innerWatch
+						innerCondition
 							.addAssignment('freezeNode', innerWatch.expression('t'));
 
 						forIn = innerCondition.addForIn(innerWatch.expression('p'), innerWatch.expression('freeze'));
@@ -362,16 +366,14 @@
 				}
 				function isAmdExtension(nodeParameter) {
 					var nsUri = ((nodeParameter || xmlNode).namespaceUri() || '');
-					return (nsUri.indexOf('amd://') === 0);
+					return isAmdExtensionValue(nsUri);
 				}
 				function solveAmdExtension() {
 					var amdPrefix = xmlNode.namespaceUri().substr(6),
 						name = xmlNode.nodeLocalName(),
 						mid = amdPrefix + '/' + name,
 						amdModuleVar = amdPathMapping[mid],
-						instanceName,
-						conditionRenderer,
-						childWidgetConditionRenderer;
+						instanceName;
 					enableAmd();
 					if (!amdModuleVar) {
 						amdModuleVar = renderer.getNewVariable();//Here I'm asking renderer and not parentRenderer to avoid a shadowing
@@ -389,30 +391,42 @@
 					instanceName = renderer.getNewVariable();
 					renderer.addVar(instanceName);
 					renderer.addAssignment(instanceName, renderer.createObject(amdModuleVar));
+					renderer.addAssignment('node', renderer.expression(instanceName));
+					return instanceName;
+				}
+				function showNjsWidget(instanceName) {
+					var conditionRenderer,
+						childWidgetConditionRenderer;
 					conditionRenderer = renderer.addCondition(renderer.expression(instanceName).member('$njsWidget')).renderer;
 					conditionRenderer
 						.addStatement(
-							conditionRenderer
-								.expression(instanceName)
-								.member('show')
-								.invoke(
-									conditionRenderer.expression('node')
-								)
+						conditionRenderer
+							.expression(instanceName)
+							.member('show')
+							.invoke(
+								conditionRenderer
+									.expression('nodes')
+									.element(
+										conditionRenderer
+											.expression('nodes')
+											.member('length')
+											.minus(conditionRenderer.literal(1))
+									)
+							)
 						);
 					childWidgetConditionRenderer = conditionRenderer
-													.addCondition(
-														conditionRenderer
-															.expression('context')
-															.member('registerChildWidget')
-													).renderer;
+						.addCondition(
+						conditionRenderer
+							.expression('context')
+							.member('registerChildWidget')
+					).renderer;
 					childWidgetConditionRenderer
 						.addStatement(
-							childWidgetConditionRenderer
-								.expression('context')
-								.member('registerChildWidget')
-								.invoke()
-						);
-					renderer.addAssignment('node', renderer.expression(instanceName));
+						childWidgetConditionRenderer
+							.expression('context')
+							.member('registerChildWidget')
+							.invoke()
+					);
 				}
 				if (!parentNode) {
 					renderer
@@ -448,8 +462,9 @@
 						renderer = pushRenderer(renderer.chunk().renderer);
 						if (isAmdExtension()) {
 							elementContext.mode = 'amdExtension';
-							solveAmdExtension();
+							amdInstanceName = solveAmdExtension();
 							visitChildNodes();
+							showNjsWidget(amdInstanceName);
 							renderer.addAssignment('node', renderer.expression('node').member('domNode'));
 						}
 						else {
@@ -472,16 +487,16 @@
 			}
 			var forLoopStack = [];
 			var forLoopVariableStack = [];
-			function processParsedResult(result, target, targetType, arr, idx, elementContext) {
+			function processParsedResult(result, target, targetType, arr, idx, elementContext, compound) {
 				var cnt,
 					fName;
 				if (result.type === 'mixed'){
 					for (cnt=0; cnt < result.content.length; cnt += 1){
-						processParsedResult(result.content[cnt], target, targetType, arr, idx, elementContext);
+						processParsedResult(result.content[cnt], target, targetType, arr, idx, elementContext, true);
 					}
 				}
 				else if (result.type === 'expressionToken'){
-					processExpressionToken(result, target, targetType, elementContext);
+					processExpressionToken(result, target, targetType, elementContext, compound);
 				}
 				else if (result.type === 'any'){
 					renderer
@@ -610,7 +625,7 @@
 					throw new Error('unsupported content type ' + expression.contentType);
 				}
 			}
-			function processExpression(expression, target, targetType, elementContext) {
+			function processExpression(expression, target, targetType, elementContext, compound) {
 				var optimized = expression.optimized || ['String', 'DOM', '9js', 'Dijit'],
 					condition;
 				function putValue(targetType) {
@@ -688,10 +703,20 @@
 						}
 					}
 					if (targetType === 'attr'){
-						var attrCondition = renderer.addCondition(renderer.expression(target).notEquals(renderer.literal('')));
-						attrCondition.renderer.addAssignment(target, renderer.expression(target).op('+', renderer.expression('putValue').or(renderer.literal('')).parenthesis() ));
-						var attrElse = attrCondition.elseDo();
-						attrElse.addAssignment(target, renderer.expression('putValue').or(renderer.literal('')).parenthesis());
+						var attrCondition,
+							attrElse;
+						if (compound) {
+							attrCondition = renderer.addCondition(renderer.expression(target).notEquals(renderer.literal('')));
+							attrCondition.renderer.addAssignment(target, renderer.expression(target).op('+', renderer.expression('putValue').or(renderer.literal('')).parenthesis() ));
+							attrElse = attrCondition.elseDo();
+							attrElse.addAssignment(target, renderer.expression('putValue').or(renderer.literal('')).parenthesis());
+						}
+						else {
+							var attrCondition = renderer.addCondition(renderer.expression(target).notEquals(renderer.raw('undefined')));
+							attrCondition.renderer.addAssignment(target, renderer.expression('putValue'));
+							var attrElse = attrCondition.elseDo();
+							attrElse.addAssignment(target, renderer.literal(''));
+						}
 //						r += target + ' += putValue || "";\n';
 					}
 					else if (targetType === 'text'){
@@ -833,10 +858,10 @@
 					);
 				//return 'attachTemp = r[\'' + xmlNode.value() + '\'];\nif (attachTemp) {\nif ( Object.prototype.toString.call( attachTemp ) === \'[object Array]\' ) {\nattachTemp.push(node);\n}\nelse {\nr[\'' + xmlNode.value() + '\'] = [attachTemp, node];\n}\n}\nelse {\nr[\'' + xmlNode.value() + '\'] = node;\n}\n';
 			}
-			function processExpressionToken(result, target, targetType, elementContext) {
+			function processExpressionToken(result, target, targetType, elementContext, compound) {
 				if (result.modifier === 'live') {
 					if (result.value.type === 'expression'){
-						processLiveExpression(result.value, target, targetType, elementContext);
+						processLiveExpression(result.value, target, targetType, elementContext, compound);
 					}
 					else {
 						console.log('unsupported expression token type: ');
@@ -845,7 +870,7 @@
 				}
 				else {
 					if (result.value.type === 'expression'){
-						processExpression(result.value, target, targetType, elementContext);
+						processExpression(result.value, target, targetType, elementContext, compound);
 					}
 					else {
 						console.log('unsupported expression token type: ');
@@ -982,13 +1007,15 @@
 				}
 			}
 			function processAttribute(xmlNode, attName, elementContext) {
+				var attval;
 				if (isAttachPoint(xmlNode) || attName === 'data-ninejs-tagName') {
 					elementContext.needsDom = true;
 					processAttachPoint(xmlNode);
 				} else {
 					renderer.addAssignment('av', renderer.literal(''));
 //					r += 'av = \'\';\n';
-					processTextFragment(xmlNode.value(), renderer.expression('av'), 'attr', null, null, elementContext);
+					attval = xmlNode.value();
+					processTextFragment(attval, renderer.expression('av'), 'attr', null, null, elementContext);
 					if (elementContext.mode === 'amdExtension') {
 						renderer
 							.addStatement(
@@ -1011,17 +1038,18 @@
 	//						r += 'node.className = av;\n';
 						}
 						else {
-							renderer
-								.addStatement(
+							if (!isAmdExtensionValue(attval)) {
+								renderer
+									.addStatement(
 									renderer
 										.expression('node')
 										.member('setAttribute')
 										.invoke(
-											renderer.literal(attName),
-											renderer.expression('av')
-										)
+										renderer.literal(attName),
+										renderer.expression('av')
+									)
 								);
-	//						r += 'node.setAttribute(\'' + attName + '\', av);\n';
+							}
 						}
 					}
 				}

@@ -2038,7 +2038,12 @@ More details at https://github.com/Modernizr/Modernizr/issues/312
 			//IE6/7 confuses the form idl attribute and the form content attribute
 			if (document.createAttribute) {
 				attr = document.createAttribute("form");
-				attr.nodeValue = id;
+				if (attr.hasOwnProperty('value')) {
+					attr.value = id;
+				}
+				else {
+					attr.nodeValue = id;
+				}
 				input.setAttributeNode(attr);
 				div.appendChild(form);
 				div.appendChild(input);
@@ -2632,8 +2637,27 @@ More details at https://github.com/Modernizr/Modernizr/issues/312
 		Modernizr.addTest('performance', !!Modernizr.prefixed('performance', window));;
 
 		Modernizr.add = Modernizr.addTest;
-		Modernizr.add('dom-addeventlistener', !!document.addEventListener);
+		Modernizr.addTest('ietrident', function () {
+			var ua = navigator.userAgent,
+				rv;
+			var re  = new RegExp('Trident/.*rv:([0-9]{1,}[\\.0-9]{0,})');
+			if (re.exec(ua) != null) {
+				rv = parseFloat(RegExp.$1);
+				return rv;
+			}
+		});
+		Modernizr.add('dom-addeventlistener', !Modernizr.ietrident && !!document.addEventListener);
 		Modernizr.add('touch', 'ontouchstart' in document || window.navigator.msMaxTouchPoints > 0);
+
+		Modernizr.addTest('ietrident', function () {
+			var ua = navigator.userAgent,
+				rv;
+			var re  = new RegExp('Trident/.*rv:([0-9]{1,}[\\.0-9]{0,})');
+			if (re.exec(ua) != null) {
+				rv = parseFloat(RegExp.$1);
+				return rv;
+			}
+		});
 		return Modernizr;
 	}).call(window);
 });
