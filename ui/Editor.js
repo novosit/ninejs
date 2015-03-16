@@ -108,14 +108,40 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		}
 		return NumberTextBox;
 	}
+	function getDateTextBoxConstructor () {
+		var DateTextBox;
+		if (!modernizer.inputtypes.date) {
+			dateTextBoxDefer = def.defer();
+			DateTextBox = dateTextBoxDefer.promise;
+			setTimeout(function () {
+				require([dateTextBoxImpl], function (C) {
+					DateTextBox = C;
+					dateTextBoxDefer.resolve(C);
+					dateTextBoxDefer = null;
+				});
+			});
+			if (!DateTextBox) {
+				throw new Error('Implementation for DateTextBox: ' + dateTextBoxImpl + ' must be previously loaded.');
+			}
+		}
+		else {
+			DateTextBox = extend(function () {
+				this.domNode = window.document.createElement('input');
+				this.domNode.type = 'date';
+			}, ControlBase);
+		}
+		return DateTextBox;
+	}
 	function getTimeTextBoxConstructor() {
 		if (!modernizer.inputtypes.time) {
 			timeTextBoxDefer = def.defer();
 			TimeTextBox = timeTextBoxDefer.promise;
-			require([timeTextBoxImpl], function (C) {
-				TimeTextBox = C;
-				timeTextBoxDefer.resolve(C);
-				timeTextBoxDefer = null;
+			setTimeout(function () {
+				require([timeTextBoxImpl], function (C) {
+					TimeTextBox = C;
+					timeTextBoxDefer.resolve(C);
+					timeTextBoxDefer = null;
+				});
 			});
 			if (!TimeTextBox) {
 				throw new Error('Implementation for TimeTextBox: ' + timeTextBoxImpl + ' must be previously loaded.');
@@ -130,29 +156,19 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		return TimeTextBox;
 	}
 	NumberTextBox = getNumberTextBoxConstructor();
-	if (!modernizer.inputtypes.date) {
-		dateTextBoxDefer = def.defer();
-		DateTextBox = dateTextBoxDefer.promise;
-		require([dateTextBoxImpl], function (C) {
-			DateTextBox = C;
-			dateTextBoxDefer.resolve(C);
-			dateTextBoxDefer = null;
-		});
-		if (!DateTextBox) {
-			throw new Error('Implementation for DateTextBox: ' + dateTextBoxImpl + ' must be previously loaded.');
-		}
-	}
-	else {
-		DateTextBox = extend(function () {
-			this.domNode = window.document.createElement('input');
-			this.domNode.type = 'date';
-		}, ControlBase);
-	}
+	DateTextBox = getDateTextBoxConstructor();
 	CheckBox = extend(function () {
 		this.domNode = window.document.createElement('input');
 		this.domNode.type = 'checkbox';
-		this.domNode.value = 'true';
-	}, ControlBase);
+		this.domNode.checked = '';
+	}, ControlBase, {
+		valueSetter: extend.after(function (v) {
+			var self = this;
+			def.when(this.domNode, function () {
+				self.domNode.checked = (!!v)? 'checked' : '';
+			});
+		})
+	});
 	TextBox = extend(function () {
 		this.domNode = window.document.createElement('input');
 		this.domNode.type = 'text';
@@ -161,41 +177,71 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		this.domNode = window.document.createElement('select');
 	}, ControlBase, {
 		optionsSetter: function (v) {
-			var node = this.domNode, self = this;
+			function isValue (val) {
+				return (val !== undefined) && (val !== null);
+			}
+			function getKey (item) {
+				var key;
+				if (isValue(item.key)) {
+					key = item.key;
+				}
+				else if (isValue(item.value)) {
+					key = item.value;
+				}
+				else {
+					key = item;
+				}
+				return key;
+			}
+			function getValue (item) {
+				var value;
+				if (isValue(item.value)) {
+					value = item.value;
+				}
+				else {
+					value = item;
+				}
+				return value;
+			}
+			var node = this.domNode,
+				self = this;
 			setText.emptyNode(node);
 			if (v) {
 				array.forEach(v, function (item) {
-					var key,
-						value,
-						opt,
-						selected;
-					if ((item.key !== undefined) && (item.key !== null)) {
-						key = item.key;
+					var key = getKey(item),
+						value = getValue(item),
+						opt;
+					opt = append.create('option');
+					if (key !== '') {
+						opt.setAttribute('value', key);
 					}
-					else if ((item.value !== undefined) && (item.value !== null)) {
-						key = item.value;
-					}
-					else {
-						key = item;
-					}
-					if ((item.value !== undefined) && (item.value !== null)) {
-						value = item.value;
-					}
-					else {
-						value = item;
-					}
-
-					opt = setText(append(node, 'option'), value);
-					opt.setAttribute('value', key);
 					if (item.selected === true || key === self.get('value')) {
 						opt.setAttribute('selected', 'selected');
 					}
+					setText(append(node, opt), value);
 				});
 			}
 		}
 	});
 	TimeTextBox = getTimeTextBoxConstructor();
 
+	function getControlSetter (propName) {
+		return function (c) {
+			var defer,
+				self = this;
+			if (typeof(c) === 'string') {
+				defer = def.defer();
+				self[propName] = defer.promise;
+				require([c], function (Control) {
+					self[propName] = Control;
+					defer.resolve(Control);
+				});
+			}
+			else {
+				self[propName] = c;
+			}
+		};
+	}
 	return Widget.extend({
 		skin: defaultSkin,
 		_clearDataTypeClasses : function () {
@@ -217,75 +263,152 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		}),
 		dataType : null,
 		controlClassSetter: function (v) {
-			if (this.control) {
-				var arg = v.split(' ');
-				arg.unshift(this.control.domNode);
-				setClass.apply(null, arg);
-			}
-			else {
-				throw new Error('Please set control\'s dataType property prior to assigning \'controlClass\' property');
-			}
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					var arg = v.split(' ');
+					arg.unshift(self.control.domNode);
+					setClass.apply(null, arg);
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'controlClass\' property');
+				}
+			});
 		},
 		placeholderSetter: function (v) {
 			this.placeholder = v;
-			if (this.control) {
-				this.control.domNode.placeholder = v;
-			}
-			else {
-				throw new Error('Please set control\'s dataType property prior to assigning \'placeholder\' property');
-			}
-		},
-		placeholderGetter: function () {
-			return this.placeholder;
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.placeholder = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'placeholder\' property');
+				}
+			});
 		},
 		nameSetter: function (v) {
 			this.name = v;
-			if (this.control) {
-				this.control.set('name', v);
-			}
-			else {
-				throw new Error('Please set control\'s dataType property prior to assigning \'name\' property');
-			}
-		},
-		autocompleteSetter: function (v) {
-			if (this.control) {
-				this.control.domNode.autocomplete = v;
-			}
-			else {
-				throw new Error('Please set control\'s dataType property prior to assigning \'autocomplete\' property');
-			}
-		},
-		inputTypeSetter: function (v) {
-			if (this.control) {
-				this.control.domNode.type = v;
-			}
-			else {
-				throw new Error('Please set control\'s dataType property prior to assigning \'inputType\' property');
-			}
-		},
-		requiredSetter: function (v) {
-			if (this.domNode) {
-				if (!!v) {
-					this.domNode.required = 'required';
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.set('name', v);
 				}
 				else {
-					this.domNode.required = null;
+					throw new Error('Please set control\'s dataType property prior to assigning \'name\' property');
 				}
-			}
-			else {
-				var self = this;
-				on.once('updatedSkin', function () {
+			});
+		},
+		autocompleteSetter: function (v) {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.autocomplete = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'autocomplete\' property');
+				}
+			});
+		},
+		inputTypeSetter: function (v) {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.type = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'inputType\' property');
+				}
+			});
+		},
+		requiredSetter: function (v) {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control.domNode) {
 					if (!!v) {
-						self.domNode.required = 'required';
+						self.control.domNode.required = 'required';
 					}
 					else {
-						self.domNode.required = null;
+						self.control.domNode.required = null;
 					}
-				});
-			}
+				}
+				else {
+					on.once('updatedSkin', function () {
+						if (!!v) {
+							self.control.domNode.required = 'required';
+						}
+						else {
+							self.control.domNode.required = null;
+						}
+					});
+				}
+			});
 		},
-
-		onBlur : function () {
+		minSetter: function(v) {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.min = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'min\' property');
+				}
+			});
+		},
+		maxSetter: function(v) {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.max = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'max\' property');
+				}
+			});
+		},
+		maxLengthSetter: function (v) {
+			this.maxLength = v; /*The uppercase L is not a typo*/
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.maxLength = v; /*The uppercase L is not a typo*/
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'maxlength\' property');
+				}
+			});
+		},
+		titleSetter: function (v) {
+			this.title = v;
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.title = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'title\' property');
+				}
+			});
+		},
+		patternSetter: function (v) {
+			this.pattern = v;
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.domNode.pattern = v;
+				}
+				else {
+					throw new Error('Please set control\'s dataType property prior to assigning \'pattern\' property');
+				}
+			});
+		},
+		SelectControlSetter: getControlSetter('SelectControl'),
+		TextBoxControlSetter: getControlSetter('TextBoxControl'),
+		CheckBoxControlSetter: getControlSetter('CheckBoxControl'),
+		TimeTextBoxControlSetter: getControlSetter('TimeTextBoxControl'),
+		DateTextBoxControlSetter: getControlSetter('DateTextBoxControl'),
+		NumberTextBoxControlSetter: getControlSetter('NumberTextBoxControl'),
+		onBlur: function () {
 
 		},
 		bind: function (target, name){
@@ -303,10 +426,13 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			return this;
 		},
 
-		focus : function () {
-			if (this.control && (typeof(this.control.focus) === 'function')) {
-				this.control.focus();
-			}
+		focus: function () {
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control && (typeof(self.control.focus) === 'function')) {
+					self.control.focus();
+				}
+			});
 		},
 		/*
 		 * "integer", "decimal", "date", "datetime", "boolean", "record", "alphanumeric",
@@ -331,6 +457,12 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 					});
 				}
 			};
+			function getEventTarget (control) {
+				if (control.domNode && control.domNode.localName) {
+					return control.domNode;
+				}
+				return control;
+			}
 
 			buildNumberTextBox = function (places) {
 				var NumberTextBoxControl = this.NumberTextBoxControl || NumberTextBox;
@@ -346,8 +478,11 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 				return def.when(NumberTextBoxControl, function (NumberTextBoxControl) {
 					var control = new NumberTextBoxControl(args);
 					self.own(
-						on((control.domNode || control), 'blur', function (e) {
+						on(getEventTarget(control), 'blur', function (e) {
 							control.editor.emit('blur', e);
+						}),
+						on(getEventTarget(control), 'input', function (e) {
+							control.editor.emit('input', e);
 						})
 					);
 					control.watch('value', function (name, old, newv) {
@@ -372,8 +507,11 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 				return def.when(DateTextBoxControl, function (DateTextBoxControl) {
 					var control = new DateTextBoxControl(args);
 					self.own(
-						on((control.domNode || control), 'blur', function (e) {
+						on(getEventTarget(control), 'blur', function (e) {
 							control.editor.emit('blur', e);
+						}),
+						on(getEventTarget(control), 'input', function (e) {
+							control.editor.emit('input', e);
 						})
 					);
 					control.watch('value', function (name, old, newv) {
@@ -398,8 +536,11 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 				return def.when(TimeTextBoxControl, function (TimeTextBoxControl) {
 					var control = new TimeTextBoxControl(args);
 					self.own(
-						on((control.domNode || control), 'blur', function (e) {
+						on(getEventTarget(control), 'blur', function (e) {
 							control.editor.emit('blur', e);
+						}),
+						on(getEventTarget(control), 'input', function (e) {
+							control.editor.emit('input', e);
 						})
 					);
 					control.watch('value', function (name, old, newv) {
@@ -422,17 +563,22 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new CheckBoxControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function (e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(CheckBoxControl, function (CheckBoxControl) {
+					var control = new CheckBoxControl(args);
+					return def.when(control.show(self.domNode), function () {
+						self.own(
+							on(getEventTarget(control), 'blur', function (e) {
+								control.editor.emit('blur', e);
+							})
+						);
+						control.watch('value', function (name, old, newv) {
+							/* jshint unused: true */
+							self.set('value', newv, true);
+							control.editor.emit('input', { value: self.get('value')});
+						});
+						return control;
+					});
 				});
-				return control;
 			};
 
 			buildTextBox = function () {
@@ -448,17 +594,22 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new TextBoxControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function (e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(TextBoxControl, function (TextBoxControl) {
+					var control = new TextBoxControl(args);
+					self.own(
+						on(getEventTarget(control), 'blur', function (e) {
+							control.editor.emit('blur', e);
+						}),
+						on(getEventTarget(control), 'input', function (e) {
+							control.editor.emit('input', e);
+						})
+					);
+					control.watch('value', function (name, old, newv) {
+						/* jshint unused: true */
+						self.set('value', newv, true);
+					});
+					return control;
 				});
-				return control;
 			};
 
 			buildSelect = function () {
@@ -473,21 +624,27 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 					},
 					self = this;
 				extend.mixin(args, this.args);
-				var control = new SelectControl(args);
-				self.own(
-					on((control.domNode || control), 'blur', function (e) {
-						control.editor.emit('blur', e);
-					})
-				);
-				control.watch('value', function (name, old, newv) {
-					/* jshint unused: true */
-					self.set('value', newv, true);
+				return def.when(SelectControl, function (SelectControl) {
+					var control = new SelectControl(args);
+					return def.when(control.show(self.domNode), function () {
+						self.own(
+							on(getEventTarget(control), 'blur', function (e) {
+								control.editor.emit('blur', e);
+							}),
+							on(getEventTarget(control), 'input', function (e) {
+								control.editor.emit('input', e);
+							})
+						);
+						control.watch('value', function (name, old, newv) {
+							/* jshint unused: true */
+							self.set('value', newv, true);
+						});
+						return control;
+					});
 				});
-				return control;
 			};
 
 			if (val && (val !== this.dataType)) {
-
 				if (this.control) {
 					if (typeof (this.control.destroy) === 'function') {
 						this.control.destroy();
@@ -496,8 +653,8 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 						this.control.destroyRecursive(false);
 					}
 				}
-				this.control = null;
-				def.when(this._clearDataTypeClasses(), function () {
+				this.control = def.defer();
+				var p = def.when(this._clearDataTypeClasses(), function () {
 					setClass(self.domNode, ('dataType-' + val));
 
 					var controlMap = {
@@ -513,28 +670,35 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 						'alphanumeric' : buildTextBox,
 						'list' : buildSelect
 					};
-
-					def.when(controlMap[val].apply(self), function (ctrl) {
+					return def.when(controlMap[val].apply(self), function (ctrl) {
+						var controlPromise = self.control;
 						self.control = ctrl;
+						if (typeof(controlPromise.resolve) === 'function') {
+							controlPromise.resolve(ctrl);
+						}
 
-						self.control.startup();
+						(self.control.startup || self.control.show).call(self.control);
 						append(self.domNode, self.control.domNode);
 					});
 				});
 
 				this.dataType = val;
+				return p;
 			}
 		},
 
 		nullValueSetter: function (val) {
-			if (this.control) {
-				this.control.nullValue = val;
-			}
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.control) {
+					self.control.nullValue = val;
+				}
+			});
 		},
 
 		valueSetter : function (val, stopPropagate) {
-			var undef = (function (u){ return u; }());
-			if ((val === null) && this.control && (this.control.nullValue !== undef) && (this.control.nullValue !== null)){
+			var self = this;
+			if ((val === null) && this.control && (this.control.nullValue !== undefined) && (this.control.nullValue !== null)){
 				val = this.control.nullValue;
 				this.value = val;
 				this.set('value', val, true);
@@ -545,36 +709,44 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 				}
 				this.value = val;
 			}
+			return def.when(this.control, function () {
+				if (!stopPropagate) {
+					var dataType = self.get('dataType'), implied;
+					//special case for number values
 
-			if (!stopPropagate) {
-				var dataType = this.get('dataType'), implied;
-				//special case for number values
-
-				if (!this.control) {
-					this.set('dataType', this.get('dataType'));
-					//It may happen, don't look at me like that
-				}
-
-				if ((dataType === 'integer') || (dataType === 'decimal')) {
-					implied = val;
-					if (val && objUtils.isString(val)) {
-						implied = val * 1;
+					if (!self.control) {
+						self.set('dataType', self.get('dataType'));
+						//It may happen, don't look at me like that
 					}
-					this.control.set('value', implied);
-				} else if (dataType === 'boolean') {
-					this.control.set('checked', !!val);
-				} else {
-					this.control.set('value', val);
+
+					if ((dataType === 'integer') || (dataType === 'decimal')) {
+						implied = val;
+						if (val && objUtils.isString(val)) {
+							implied = val * 1;
+						}
+						self.control.set('value', implied);
+					}
+//					else if (dataType === 'boolean') {
+//						self.control.set('checked', !!val);
+//					}
+					else {
+						self.control.set('value', val);
+					}
 				}
-			}
+			});
 		},
 
 		optionsSetter : function (values) {
 			this.options = values;
-			if (this.get('dataType') === 'list') {
-				this.control.set('options', values);
-				this.control.set('value', this.value);
-			}
+			var self = this;
+			return def.when(this.control, function () {
+				if (self.get('dataType') === 'list') {
+					self.control.set('options', values);
+					self.control.set('value', self.value);
+				}
+			});
 		}
+	}, function () {
+		this.control = def.defer();
 	});
 });

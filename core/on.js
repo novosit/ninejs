@@ -16,7 +16,7 @@ Dojo Toolkit's dojo/on as of jan 2014
 				return {
 					matches: function (node, selector, root) {
 						var r = false,
-							arr = jQuery(root, selector),
+							arr = jQuery(selector, root),
 							cnt,
 							len = arr.length;
 						for (cnt = 0; cnt < len; cnt += 1) {
@@ -220,7 +220,13 @@ Dojo Toolkit's dojo/on as of jan 2014
 				// check for capture conversions
 				var capture = type in captures,
 					adjustedType = capture ? captures[type] : type;
-				target.addEventListener(adjustedType, listener, capture);
+				try {
+					target.addEventListener(adjustedType, listener, capture);
+				}
+				catch (err) {
+					console.error(err);
+					throw err;
+				}
 				// create and return the signal
 				return {
 					remove: function() {

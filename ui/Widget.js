@@ -163,17 +163,17 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 		 */
 		updateSkin: function () {
 			var self = this;
-			return def.when(this.skin, function () {
+			return def.when(this.skin, function (sk) {
 				var cnt, itemSkin, currentSkin = self.currentSkin, skinList = [], toApply;
-				if ((typeof(self.skin) === 'object') && !extend.isArray(self.skin)) {
-					skinList.push(self.skin);
-					if (self.skin.applies()){
-						toApply = self.skin;
+				if ((typeof(sk) === 'object') && !extend.isArray(sk)) {
+					skinList.push(sk);
+					if (sk.applies()){
+						toApply = sk;
 					}
 				}
-				else if (self.skin && self.skin.length) {
-					for (cnt = 0; cnt < self.skin.length; cnt += 1) {
-						itemSkin = self.skin[cnt];
+				else if (sk && sk.length) {
+					for (cnt = 0; cnt < sk.length; cnt += 1) {
+						itemSkin = sk[cnt];
 						if (!toApply && itemSkin.applies()){
 							toApply = itemSkin;
 						}
@@ -188,16 +188,29 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 							itemSkin.disable();
 						}
 					}
-					return def.when(toApply.enable(self), function () {
-						self.currentSkin = toApply;
-						if (self.$njsShowDefer) {
-							self.$njsShowDefer.resolve(self.domNode);
-							self.$njsShowDefer = null;
-						}
-						self.onUpdatedSkin();
-					});
+					self.currentSkin = toApply;
+					try {
+						return def.when(toApply.enable(self), function () {
+							if (self.$njsShowDefer) {
+								self.$njsShowDefer.resolve(self.domNode);
+								self.$njsShowDefer = null;
+							}
+							try {
+								return self.onUpdatedSkin();
+							}
+							catch (err) {
+								console.error(err);
+							}
+						}, function (err) {
+							console.error(err);
+						});
+					}
+					catch (err) {
+						console.error(err);
+						throw err;
+					}
 				}
-			});
+			}, console.error);
 		},
 		/**
 		 * Calls update over the currentSkin and then emits an 'updatedSkin' event without data.
@@ -266,37 +279,41 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				}
 				return self;
 			}
+			if (this.waitSkin) {
+				if (parentNode) {
+					return def.when(this.waitSkin, function () {
+						self.waitSkin = null;
+						self.show(parentNode);
+					});
+				}
+				return this.waitSkin;
+			}
 			if (!this.currentSkin) {
 				if (this.domNode && this.domNode.nodeType === 1) {
 					appendIt();
 				}
-				if (this.waitSkin) {
-					return this.waitSkin;
-				}
-				else {
-					this.waitSkin = def.when(this.updateSkin(), function(/*sk*/) {
-						if (self.domNode) {
-							listeners =  self.$njsEventListeners;
-							for (cnt = 0; cnt < self.$njsEventListenerHandlers; cnt += 1) {
-								current = self.$njsEventListenerHandlers[cnt];
-								current.remove();
-							}
-							self.$njsEventListenerHandlers = [];
-							for (var p in listeners) {
-								if (listeners.hasOwnProperty(p)) {
-									current = listeners[p];
-									for (cnt = 0; cnt < current.length; cnt += 1) {
-										self.$njsEventListenerHandlers.push(on(self.domNode, p, current[cnt]));
-									}
+				this.waitSkin = def.when(this.updateSkin(), function(/*sk*/) {
+					if (self.domNode) {
+						listeners =  self.$njsEventListeners;
+						for (cnt = 0; cnt < self.$njsEventListenerHandlers; cnt += 1) {
+							current = self.$njsEventListenerHandlers[cnt];
+							current.remove();
+						}
+						self.$njsEventListenerHandlers = [];
+						for (var p in listeners) {
+							if (listeners.hasOwnProperty(p)) {
+								current = listeners[p];
+								for (cnt = 0; cnt < current.length; cnt += 1) {
+									self.$njsEventListenerHandlers.push(on(self.domNode, p, current[cnt]));
 								}
 							}
 						}
-						var result = appendIt();
-						self.waitSkin = null;
-						return result;
-					});
-					return this.waitSkin;
-				}
+					}
+					var result = appendIt();
+					self.waitSkin = null;
+					return result;
+				}, console.error);
+				return this.waitSkin;
 			}
 			else {
 				return appendIt();
@@ -361,11 +378,13 @@ define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/defer
 				if (typeof(defer.then) === 'function') {
 					var w = self.waitNode || self.domNode;
 					if (this.domNode) {
-						var waitNode = createWaitNode(w);
-						return def.when(defer, function () {
-							destroyWaitNode(w, waitNode);
-						}, function () {
-							destroyWaitNode(w, waitNode);
+						return def.when(this.domNode, function (){
+							var waitNode = createWaitNode(w);
+							return def.when(defer, function () {
+								destroyWaitNode(w, waitNode);
+							}, function () {
+								destroyWaitNode(w, waitNode);
+							});
 						});
 					}
 					else {

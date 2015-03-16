@@ -230,8 +230,17 @@
 			this.initUnit = function (unitId) {
 				if (!this.enabledUnits[unitId]) {
 					var unitConfig = config.units[unitId];
-					this.enabledUnits[unitId] = moduleSet[unitId].init(unitId, unitConfig) || true;
-					return this.enabledUnits[unitId];
+					var defer = deferredUtils.defer(),
+						self = this;
+					this.enabledUnits[unitId] = defer.promise;
+					deferredUtils.when(moduleSet[unitId].init(unitId, unitConfig), function (r) {
+						self.enabledUnits[unitId] = r || true;
+						defer.resolve(r || true);
+					}, console.error);
+					if (this.enabledUnits[unitId] === true) {
+						return true;
+					}
+					return this.enabledUnits[unitId].promise;
 				}
 			};
 			this.build = function() {
@@ -250,6 +259,9 @@
 				}
 				return deferredUtils.when(deferredUtils.all(pArray), function() {
 					return true;
+				}, function (error) {
+					console.log(error);
+					throw error;
 				});
 			};
 		},

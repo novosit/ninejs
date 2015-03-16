@@ -2,7 +2,8 @@ define([], function() {
 /* jshint -W074 */
 /* globals window: true */
 'use strict';
-var r = function anonymous(context,document) {
+var r = function anonymous(context,document
+/**/) {
 'use strict';
 var fn = {t:function (e, text, doc) {
 			return e.appendChild(doc.createTextNode(text));
@@ -12,7 +13,7 @@ var fn = {t:function (e, text, doc) {
 			return node;
 		},tst:function () {
 			/* global window */
-			return (window.document.body.insertAdjacentElement);
+			return window.document.body && (window.document.body.insertAdjacentElement);
 		},ae:function (e, name, doc) {
 			var node = doc.createElement(name);
 			e.appendChild(node);
@@ -77,11 +78,11 @@ var fn = {t:function (e, text, doc) {
 /* Here starts a live expression with attribute */ 
 av = '';
 putValue = context['liveChanges']['val'];
-if (av !== ''){
-	av = av + ((putValue) || '');
+if (av !== undefined){
+	av = putValue;
 
 } else {
-	av = ((putValue) || '');
+	av = '';
 
 }
 node.setAttribute('data-value',av);
@@ -211,11 +212,11 @@ return node;
 		node = e(node,'div',node.ownerDocument);
 		av = '';
 		putValue = context['person']['name'];
-		if (av !== ''){
-			av = av + ((putValue) || '');
+		if (av !== undefined){
+			av = putValue;
 
 		} else {
-			av = ((putValue) || '');
+			av = '';
 
 		}
 		node.setAttribute('data-key',av);
@@ -350,22 +351,22 @@ if (!document){
 
 }
 putValue = context['tagName'];
-if (x !== ''){
-	x = x + ((putValue) || '');
+if (x !== undefined){
+	x = putValue;
 
 } else {
-	x = ((putValue) || '');
+	x = '';
 
 }
 node = document.createElement((putValue) || 'div');
 nodes.push(node);
 av = '';
 putValue = context['class'];
-if (av !== ''){
-	av = av + ((putValue) || '');
+if (av !== undefined){
+	av = putValue;
 
 } else {
-	av = ((putValue) || '');
+	av = '';
 
 }
 node.className = av;

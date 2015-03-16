@@ -22,7 +22,7 @@
 	position: relative;
 	> {
 		&.njsTransitionActive {
-			left: 0;
+			left: 0 !important;
 			opacity: 1;
 			display: block;
 			&.njsTransitionLeft {
@@ -75,4 +75,7 @@
 }
 .cursor-pointer {
 	cursor: pointer;
+}
+.njsRequiredBox {
+	box-shadow: 0px 0px 5px 5px rgba(255,0,0,0.54) !important;
 }

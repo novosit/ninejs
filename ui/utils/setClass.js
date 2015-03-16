@@ -103,5 +103,21 @@ define(['../../modernizer'], function (modernizer) {
 		return node;
 	};
 	setClass.has = ietrident ? oldSetClass.has : unkHas;
+	/*
+	Arguments: node, delay, class1, class2, class3, ...
+	 */
+	setClass.temporary = function (node, delay) {
+		var len = arguments.length,
+			cnt,
+			args = arguments;
+		for (cnt = 2; cnt < len; cnt += 1) {
+			setClass(node, args[cnt]);
+		}
+		setTimeout(function () {
+			for (cnt = 2; cnt < len; cnt += 1) {
+				setClass(node, '!' + args[cnt]);
+			}
+		}, delay);
+	};
 	return setClass;
 });
