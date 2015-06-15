@@ -15,6 +15,7 @@ var cookieParser = require('cookie-parser');
 var expressSession = require('express-session');
 var methodOverride = require('method-override');
 var bodyParser = require('body-parser');
+var busboy = require('connect-busboy');
 var path = require('path');
 var WebServer = extend(Properties, {
 	Endpoint: Endpoint,
@@ -66,18 +67,24 @@ var WebServer = extend(Properties, {
 		this.app.engine('9plate', nineplate.__express);
 		this.app.enable('view cache', true);
 
-		if (config.env === 'development') {
-			this.app.use(morgan('dev'));
-		}
-		if (config.favicon !== false) {
-			this.app.use(favicon(config.favicon || path.resolve(__dirname, 'ninejs.ico')));
-		}
-		if (config.compress !== false) {
-			this.app.use(compression({ filter: function(req, res) {
-				/* jshint unused: true */
-				return (/json|text|javascript|cache-manifest/).test(res.getHeader('Content-Type'));
-			}}));
-		}
+		(function checkLogger(self) {
+			if (config.env === 'development') {
+				self.app.use(morgan('dev'));
+			}
+		})(this);
+		(function checkFavicon (self) {
+			if (config.favicon !== false) {
+				self.app.use(favicon(config.favicon || path.resolve(__dirname, 'ninejs.ico')));
+			}
+		})(this);
+		(function checkCompression (self) {
+			if (config.compress !== false) {
+				self.app.use(compression({ filter: function(req, res) {
+					/* jshint unused: true */
+					return (/json|text|javascript|cache-manifest/).test(res.getHeader('Content-Type'));
+				}}));
+			}
+		})(this);
 		if (this.config.clientUtils !== false) {
 			this.clientUtils.init(this);
 		}
@@ -86,14 +93,34 @@ var WebServer = extend(Properties, {
 		statics.forEach(function(item) {
 			self.app.use(self.baseUrl + item.route, express['static'](item.path, { maxAge: 864000000 }));
 		});
-		if (config.cookies !== false) {
-			this.app.use(cookieParser(config.cookieSecret || '@H98s$%2-==4m'));
-		}
-		if (config.session !== false) {
-			this.app.use(expressSession(config.session || { cookie: {maxAge: 1000000 }, resave: false, saveUninitialized: false, secret: '@H98s$%2-==4m' }));
-		}
+		(function checkCookies (self) {
+			if (config.cookies !== false) {
+				self.app.use(cookieParser(config.cookieSecret || '@H98s$%2-==4m'));
+			}
+		})(this);
+
+		(function checkSession (self) {
+			if (config.session !== false) {
+				self.app.use(expressSession(config.session || { cookie: {maxAge: 1000000 }, resave: false, saveUninitialized: false, secret: '@H98s$%2-==4m' }));
+			}
+		})(this);
 		if (config.methodOverride !== false) {
 			this.app.use(methodOverride('_method'));
+		}
+		if (config.crossDomain) {
+			var crossdomain = require('crossdomain');
+			var xml;
+			if (typeof(config.crossDomain) === 'object') {
+				xml = crossdomain(config.crossDomain);
+			}
+			else {
+				xml = crossdomain({ domain: '*' });
+			}
+			this.app.use('/crossdomain.xml', function (req, res) {
+				/* jshint unused: true */
+				res.set('Content-Type', 'application/xml; charset=utf-8');
+				res.status(200).send(xml);
+			});
 		}
 		var auths = (this.phases.auth || []).slice(0);
 		auths.sort(sortByOrder);
@@ -122,21 +149,29 @@ var WebServer = extend(Properties, {
 			if ((resource.method !== 'get') && (!resource.handleAs)) {
 				resource.handleAs = 'form';
 			}
-			switch (resource.handleAs) {
-				case 'json':
-					args.push(bodyParser.json(resource.parserOptions || {}));
-					break;
-				case 'text':
-					args.push(bodyParser.text(resource.parserOptions || {}));
-					break;
-				case 'form':
-					args.push(bodyParser.urlencoded(resource.parserOptions || { extended: true }));
-					break;
-				case 'raw':
-				default:
-					args.push(bodyParser.raw(resource.parserOptions || {}));
-					break;
-			}
+			(function selectBodyParser () {
+				var parserOptions = resource.parserOptions || {};
+				switch (resource.handleAs) {
+					case 'json':
+						args.push(bodyParser.json(parserOptions));
+						break;
+					case 'text':
+						args.push(bodyParser.text(parserOptions));
+						break;
+					case 'form':
+						args.push(bodyParser.urlencoded(resource.parserOptions || { extended: true }));
+						break;
+					case 'raw':
+						args.push(bodyParser.raw(parserOptions));
+						break;
+					case 'busboy':
+						args.push(busboy(resource.parserOptions || { upload: true }));
+						break;
+					default:
+						args.push(bodyParser.raw(parserOptions));
+						break;
+				}
+			})();
 			if (typeof(resource.validate) === 'function') {
 				args.push(function (req, res, next) {
 					var r = resource.validate.call(resource, req, res);

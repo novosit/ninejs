@@ -14,7 +14,8 @@
 define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferredUtils', '../modernizer', '../core/array', './utils/setClass', '../core/objUtils', '../core/on', './utils/setText', './utils/append', '../config'], function (extend, Widget, defaultSkin, def, modernizer, array, setClass, objUtils, on, setText, append, config) {
 	'use strict';
 
-	var NumberTextBox,
+	var editorConfig = (((config.ninejs || {}).ui || {}).Editor || {}),
+		NumberTextBox,
 		numberTextBoxDefer,
 		timeTextBoxDefer,
 		DateTextBox,
@@ -24,9 +25,9 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		Select,
 		TimeTextBox,
 		ControlBase,
-		numberTextBoxImpl = ((config.ui || {}).Editor || {}).NumberTextBox || 'dijit/form/NumberTextBox',
-		dateTextBoxImpl = ((config.ui || {}).Editor || {}).DateTextBox || 'dijit/form/DateTextBox',
-		timeTextBoxImpl = ((config.ui || {}).Editor || {}).TimeTextBox || 'dijit/form/TimeTextBox',
+		numberTextBoxImpl = editorConfig.NumberTextBox || 'dijit/form/NumberTextBox',
+		dateTextBoxImpl = editorConfig.DateTextBox || 'dijit/form/DateTextBox',
+		timeTextBoxImpl = editorConfig.TimeTextBox || 'dijit/form/TimeTextBox',
 		ENTER = 13;
 	ControlBase = extend(Widget, {
 		on: function (type, act) {
@@ -242,6 +243,15 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			}
 		};
 	}
+
+	function toHTML5Date(date) {
+		var year = date.getFullYear(), 
+			month = date.getMonth() + 1 < 10 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1, 
+			day = date.getDate() < 10 ? '0' + date.getDate() : date.getDate(),
+			formated = year + '-' + month + '-' + day;
+		return formated;
+	}
+
 	return Widget.extend({
 		skin: defaultSkin,
 		_clearDataTypeClasses : function () {
@@ -672,6 +682,10 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 					};
 					return def.when(controlMap[val].apply(self), function (ctrl) {
 						var controlPromise = self.control;
+						if (self.control && (self.control.startup || self.control.show)) {
+							self.control.destroy();
+							setText.emptyNode(self.domNode);
+						}
 						self.control = ctrl;
 						if (typeof(controlPromise.resolve) === 'function') {
 							controlPromise.resolve(ctrl);
@@ -729,6 +743,9 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 //					else if (dataType === 'boolean') {
 //						self.control.set('checked', !!val);
 //					}
+					else if (dataType === 'date' && Object.prototype.toString.call(val) === '[object Date]') {
+						self.control.set('value', toHTML5Date(val));
+					}
 					else {
 						self.control.set('value', val);
 					}

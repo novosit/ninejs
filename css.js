@@ -1,4 +1,4 @@
-define(['./core/extend', './css/builder', './request'], function(extend, builder, request) {
+define(['./core/extend', './core/deferredUtils', './css/builder', './request'], function(extend, def, builder, request) {
 	'use strict';
 	var result = {},
 		ielt10 = (function () {
@@ -258,6 +258,21 @@ define(['./core/extend', './css/builder', './request'], function(extend, builder
 
 	result.style = buildStyleObject;
 
+	result.loadFromString = function (css, uniqueId) {
+		var packages;
+		if (isDojo) {
+			packages = window.dojoConfig.packages;
+		}
+		else {
+			packages = window.requirejs.s.contexts._.config.packages;
+		}
+		var defer = def.defer();
+		loadStyle(css, uniqueId, packages, '', true, function (styleObj) {
+			defer.resolve(styleObj);
+		});
+		return defer.promise;
+	};
+
 	result.load = function(id, require, load)
 	{
 		/* jshint unused: true */
@@ -294,19 +309,22 @@ define(['./core/extend', './css/builder', './request'], function(extend, builder
 				}
 				var path = require.toUrl(parts[0]);
 				if (isDojo) { //Dojo Toolkit
-					require.getText(path, true, function(data)
+					require.getText(path, false, function(data)
 					{
-						loadStyle(data, path, require.rawConfig.packages, '', /*require.rawConfig.baseUrl, */ autoEnable, load);
+						loadStyle(data, path, require.rawConfig.packages, require.rawConfig.baseUrl, autoEnable, load);
 					});
 				}
 				else {
-					request(path).then(function (data) {
+					request.get(path, { type: 'html' }).then(function (data) {
+						if ((typeof(window) !== 'undefined') && (data instanceof window.XMLHttpRequest)) { //Sometimes reqwest returns xhr object when response is empty
+							data = data.responseText;
+						}
 						var packages;
 						if (isDojo) {
 							packages = window.dojoConfig.packages;
 						}
 						else {
-							packages = requirejs.s.contexts._.config.packages;
+							packages = window.requirejs.s.contexts._.config.packages;
 						}
 						loadStyle(data, path, packages, '', autoEnable, load);
 					});

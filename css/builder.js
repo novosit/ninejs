@@ -1,5 +1,21 @@
-define([], function() {
+(function (factory) {
 	'use strict';
+	var isAmd = (typeof(define) !== 'undefined') && define.amd,
+		isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org',
+		isNode = (typeof(window) === 'undefined'),
+		req = (isDojo && isNode)? global.require : require;
+	if (isAmd) {
+		define(['../request'], factory);
+	}
+	else if (isNode) {
+		module.exports = factory(req('../request'));
+	}
+})(function (request) {
+	'use strict';
+	var isAmd = (typeof(define) !== 'undefined') && define.amd,
+		isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org',
+		isNode = (typeof(window) === 'undefined'),
+		req = (isDojo && isNode)? global.require : require;
 
 	function resolveUrl(url, path, prefixes, baseUrl, toBase64) {
 		function attachBaseUrl(baseUrl, r) {
@@ -36,13 +52,13 @@ define([], function() {
 			r = url;
 		}
 		else {
-			var pathSplit = path.split('/'), urlSplit = url.split('/');
+			var pathSplit = path.split(/\/|\\/), urlSplit = url.split('/');
 			pathSplit.pop(); //stripping the file name
-			while (urlSplit[0] && urlSplit[0] === '..'){
+			while (pathSplit.length && urlSplit[0] && (urlSplit[0] === '..')){
 				pathSplit.pop();
 				urlSplit.shift();
 			}
-			while (urlSplit[0] && urlSplit[0] === '.'){
+			while (pathSplit.length && urlSplit[0] && (urlSplit[0] === '.')){
 				urlSplit.shift();
 			}
 			url = urlSplit.join('/');
@@ -73,14 +89,35 @@ define([], function() {
 	}
 	var fs, pathModule;
 	function convertToBase64Url(url, path) {
+		if (/^data:/.test(url)){
+			return url;
+		}
+		var suffixIdx = url.indexOf('?');
+		if (suffixIdx >= 0) {
+			url = url.substr(0, suffixIdx);
+		}
 		if (!fs || !pathModule){
-			require(['dojo/node!fs', 'dojo/node!path'], function(f,p) {
-				fs = f;
-				pathModule = p;
-			});
+			if (isDojo) {
+				require(['dojo/node!fs', 'dojo/node!path'], function (f, p) {
+					fs = f;
+					pathModule = p;
+				});
+			}
+			else {
+				fs = req('fs');
+				pathModule = req('path');
+			}
 		}
 		var sizeLimit = 30000;
-		var mimeTypes = {'.gif': 'image/gif', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml'};
+		var mimeTypes = {
+			'.gif': 'image/gif',
+			'.png': 'image/png',
+			'.jpg': 'image/jpeg',
+			'.jpeg': 'image/jpeg',
+			'.svg': 'image/svg+xml',
+			'.woff': 'application/x-font-woff',
+			'.ttf': 'font/opentype'
+		};
 		var extension = pathModule.extname(url);
 
 		if (mimeTypes[extension]){
@@ -100,14 +137,19 @@ define([], function() {
 		return null;
 	}
 
-	function embedUrls(data, path, prefixes, baseUrl) {
+	function embedUrls(data, path, prefixes, baseUrl, toBase64) {
 		var r = data;
 		/* jshint unused: true */
 		r = r.replace(/url\s*\(\s*['"]?([^'"\)]*)['"]?\s*\)/g, function($0, url){
 			var newUrl = resolveUrl(url, path, prefixes, baseUrl);
-			var embedded = convertToBase64Url(newUrl, path);
-			if (embedded) {
-				url = embedded;
+			if (toBase64) {
+				var embedded = convertToBase64Url(newUrl, path);
+				if (embedded) {
+					url = embedded;
+				}
+			}
+			else {
+				url = newUrl;
 			}
 			return 'url(\'' + url + '\')';
 		});
@@ -126,8 +168,7 @@ define([], function() {
 
 				var realUrl = resolveUrl(url, realPath, prefixes, baseUrl, toBase64);
 
-				require.getText(realUrl, true, function(childData)
-				{
+				function loadHandler (childData) {
 					var childOptions = {};
 					for (var p in options) {
 						if (options.hasOwnProperty(p)) {
@@ -139,8 +180,13 @@ define([], function() {
 						var child = result;
 						r.children.push(child);
 					});
-				});
-				return '';
+				}
+				if (isDojo) { //Dojo Toolkit
+					require.getText(realUrl, true, loadHandler);
+				}
+				else {
+					request.get(realUrl, { type: 'html' }).then(loadHandler);
+				}
 			});
 			r.css = data;
 
@@ -151,9 +197,9 @@ define([], function() {
 		}
 		var toBase64 = !!options.toBase64;
 
-		if (toBase64) {
-			data = embedUrls(data, realPath, prefixes, baseUrl);
-		}
+		data = embedUrls(data, realPath, prefixes, baseUrl, toBase64);
+
+		path = path.split('\\').join('/');
 		options.path = path;
 		if (options.parentPath){
 			options.path = options.parentPath + ' => ' + options.path;
