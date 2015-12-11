@@ -2652,27 +2652,34 @@ A NineJS custom build of Modernizr
 		Modernizr.addTest('performance', !!Modernizr.prefixed('performance', window));;
 
 		Modernizr.add = Modernizr.addTest;
-		Modernizr.addTest('ietrident', function () {
+		Modernizr.add('ietrident', function () {
 			var ua = navigator.userAgent,
 				rv;
+
+			/*IE 11 */
 			var re  = new RegExp('Trident/.*rv:([0-9]{1,}[\\.0-9]{0,})');
 			if (re.exec(ua) != null) {
 				rv = parseFloat(RegExp.$1);
 				return rv;
 			}
+
+			/*IE 10 or older: MSIE 99.99*/
+			re = new RegExp('MSIE ([0-9]{1,}[\\.0-9]{0,})');
+			if (re.exec(ua) != null) {
+				rv = parseFloat(RegExp.$1);
+				return rv;
+			}
+
+			return 0.0;
 		});
-		Modernizr.add('dom-addeventlistener', !Modernizr.ietrident && !!document.addEventListener);
+
+		Modernizr.add('dom-addeventlistener', !!document.addEventListener);
 		Modernizr.add('touch', 'ontouchstart' in document || window.navigator.msMaxTouchPoints > 0);
 
-		Modernizr.addTest('ietrident', function () {
-			var ua = navigator.userAgent,
-				rv;
-			var re  = new RegExp('Trident/.*rv:([0-9]{1,}[\\.0-9]{0,})');
-			if (re.exec(ua) != null) {
-				rv = parseFloat(RegExp.$1);
-				return rv;
-			}
+		Modernizr.add('attachEvent', function () {
+			return !!document.attachEvent && Modernizr.ietrident < 11;
 		});
+
 		return Modernizr;
 	}).call(window);
 });

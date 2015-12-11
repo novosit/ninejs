@@ -235,7 +235,7 @@ Dojo Toolkit's dojo/on as of jan 2014
 				};
 			}
 			type = 'on' + type;
-			if (fixAttach && target.attachEvent) {
+			if (fixAttach && has('attachEvent')) {
 				return fixAttach(target, type, listener);
 			}
 			throw new Error('Target must be an event emitter. Event = on' + type);
