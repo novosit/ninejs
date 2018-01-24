@@ -15,7 +15,7 @@
 	}
 })(function (builder, fs) {
 	'use strict';
-	var thisModuleMid = 'ninejs/css',
+	var thisModuleMid = 'ninejs/css/style',
 		configMid = 'ninejs/config';
 
 	function deepToString(obj, quotes) {
@@ -115,7 +115,7 @@
 		functionBody += 'var result = ' + deepToString(cssResult, '\"') + ';\n';
 		functionBody += 'result.data = ' + data + '; \n';
 		functionBody += 'if (config.applicationUrl) { result.path = config.applicationUrl + result.path; }\n';
-		functionBody += '\nreturn style.style(result);\n});';
+		functionBody += '\nreturn style.buildStyleObject(result);\n});';
 		if (noWrap) {
 			return functionBody;
 		}
