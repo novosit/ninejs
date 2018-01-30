@@ -1,5 +1,5 @@
-/**
-@module nineplate
+/** 
+@module nineplate 
 @author Eduardo Burgos <eburgos@gmail.com>
 */
 (function() {
@@ -151,13 +151,6 @@
 					});
 				}
 			};
-			result.pitch = function (filePath) {
-				return new Promise(function (resolve) {
-					requireText.load(filePath, req, function (text) {
-						resolve(new Nineplate().buildTemplate(text).toAmd());
-					})
-				});
-			};
 		}
 		return result;
 	}
@@ -171,7 +164,7 @@
 			define(['./core/text', './core/extend', './core/ext/Properties', './core/deferredUtils', './nineplate/DomProcessor', './nineplate/TextProcessor'], moduleExport);
 		}
 	} else if (isNode) { //Server side
-		module.exports = moduleExport(require('./nineplate/utils/node/text'), require('./core/extend'), require('./core/ext/Properties'), require('./core/deferredUtils'), require('./nineplate/DomProcessor'), require('./nineplate/TextProcessor'));
+		module.exports = moduleExport(req('./nineplate/utils/node/text'), req('./core/extend'), req('./core/ext/Properties'), req('./core/deferredUtils'), req('./nineplate/DomProcessor'), req('./nineplate/TextProcessor'));
 	} else {
 		// plain script in a browser
 		throw new Error('Non AMD environments are not supported');

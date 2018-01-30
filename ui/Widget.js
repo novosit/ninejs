@@ -1,18 +1,12 @@
 /* global window */
 define(['../core/extend', '../core/ext/Properties', '../core/on', '../core/deferredUtils', './utils/setClass', './utils/append', '../core/objUtils'], function (extend, Properties, on, def, setClass, append, objUtils) {
 	'use strict';
-	function addCloseWidgetsHandler() {
-		if (!window.document.body) {
-			setTimeout(addCloseWidgetsHandler, 100);
-		}
-		else {
-			on(window.document.body, 'click', function (/*evt*/) {
-				on.emit(window.document.body, '9jsclosewidgets', { target: null });
-				//evt.stopPropagation();
-			});
-		}
-	}
-	addCloseWidgetsHandler();
+	window.setTimeout(function () {
+		on(window.document.body, 'click', function (/*evt*/) {
+			on.emit(window.document.body, '9jsclosewidgets', { target: null });
+			//evt.stopPropagation();
+		});
+	}, 0);
 	function createWaitNode (parent, self) {
 		if (!self.waiting) {
 			self.waiting = true;
