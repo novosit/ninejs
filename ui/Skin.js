@@ -54,7 +54,8 @@ define(['../core/extend', '../core/ext/Properties', '../nineplate', '../core/def
 					defer.resolve(true);
 				};
 				if (this.template.amdDependencies && this.template.amdDependencies.length) {
-					require(this.template.amdDependencies || [], afterLoadDeps);
+					var r = { req: require };
+					r.req(this.template.amdDependencies || [], afterLoadDeps);
 				}
 				else {
 					afterLoadDeps();

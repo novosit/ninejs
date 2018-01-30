@@ -44,6 +44,7 @@ Dojo Toolkit's dojo/text as of jan 2014
 			if (require.getText) {
 				getText = require.getText;
 			} else {
+				var r = { req: req };
 				getText = function(url, sync, load) {
 					if ((url.indexOf('http:') === 0) || (url.indexOf('https:') === 0)) {
 						request(url, {
@@ -53,7 +54,7 @@ Dojo Toolkit's dojo/text as of jan 2014
 					}
 					else {
 						if (isAmd) {
-							req(['fs'], function(fs) {
+							r.req(['fs'], function(fs) {
 								fs.readFile(url, { encoding: 'utf-8' }, function(err, content) {
 									if (!err) {
 										load(content);
@@ -65,7 +66,7 @@ Dojo Toolkit's dojo/text as of jan 2014
 							});
 						}
 						else {
-							req('fs').readFile(url, { encoding: 'utf-8' }, function(err, content) {
+							r.req('fs').readFile(url, { encoding: 'utf-8' }, function(err, content) {
 								if (!err) {
 									load(content);
 								}

@@ -24,7 +24,8 @@ define(['./config', './moduleRegistry', './Module', '../core/extend', '../core/d
 		}
 	}
 	var moduleLoadPromise = deferredUtils.defer();
-	require(moduleArray, function() {
+	var r = { req: require };
+	r.req(moduleArray, function() {
 		var cnt,
 			current,
 			allUnitsCfg = {},

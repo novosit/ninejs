@@ -27,16 +27,9 @@
 
 	if (isAmd) { //AMD
 		if (isNode) {
-			if (isDojo) {
-				define(['dojo/node!events'], function(events) {
-					return events.EventEmitter;
-				});
-			}
-			else {
-				define(['events'], function(events) {
-					return events.EventEmitter;
-				});
-			}
+			define(['events'], function(events) {
+				return events.EventEmitter;
+			});
 		}
 		else {
 			define(['../on', '../aspect'], evented);

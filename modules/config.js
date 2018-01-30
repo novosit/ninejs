@@ -53,8 +53,9 @@
 			}
 		}
 		if (isNode) {
-			var fs = req('fs'),
-				path = req('path'),
+			var r = { req: req },
+				fs = r.req('fs'),
+				path = r.req('path'),
 				njsConfigPath = path.resolve(process.cwd(), '9js.config.json'),
 				njsConfig = {},
 				finalConfig = { modules: [], units: {} };

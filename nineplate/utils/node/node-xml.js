@@ -6,7 +6,7 @@
 
 (function (){
 
-function moduleExport(util, fs) {
+function moduleExport() {
 
 // CONSTANTS
 var whitespace = "\n\r\t ";
@@ -804,13 +804,6 @@ SaxParser.CMNT  = 9;
 SaxParser.DTD_B = 10;
 SaxParser.DTD_E = 11;
 
-SaxParser.prototype.parseFile = function(filename) { //This function will only work in the node.js environment.
-    var that = this;
-    fs.readFile(filename, function (err, data) {
-      that.parseString(data);
-    });
-}
-
 
 SaxParser.prototype.parseString = function(strD) {
     var that = this;
@@ -1274,13 +1267,13 @@ return {
 }
 if ((typeof(define) === 'function') && (define.amd)) {
     if (define.amd.vendor === 'dojotoolkit.org') {
-        define(['dojo/node!util', 'dojo/node!fs'], moduleExport);
+        define([], moduleExport);
     }
     else {
-        define(['util', 'fs'], moduleExport);
+        define([], moduleExport);
     }
 }
 else {
-    module.exports = moduleExport(require('util'), require('fs'));
+    module.exports = moduleExport();
 }
 })();

@@ -5,20 +5,13 @@
 	var isNode = (typeof(window) === 'undefined');
 	var req = (isDojo && isNode)? global.require : require;
 
-	function moduleExport(xml, Q) {
+	function moduleExport(xml, def) {
 		var defer;
-		if (isNode) {
-			if (isDojo) {
-				defer = function() {
-					return new Q(); //dojo/Deferred
-				};
-			}
-			else {
-				defer = function() {
-					return Q.defer();
-				};
-			}
-		}
+        if (isNode) {
+            defer = function() {
+                return def.defer();
+            };
+        }
 		function getAttributeNS(node, prefix) {
 			if (node.namespaces.length) {
 				var r = node.namespaces.filter(function (ns) {
@@ -133,16 +126,16 @@
 		};
 		return { parse: parse };
 	}
-	if (isNode) {
-		if (isDojo) {
-			define(['./node-xml', 'dojo/Deferred'], moduleExport);
-		}
-		else if (isAmd) {//RequireJS probably
-			var def = define;
-			def(['./node-xml', 'kew'], moduleExport);
-		}
-		else {
-			module.exports = moduleExport(req('./node-xml'), req('kew'));
-		}
-	}
+    if (isNode) {
+        if (isDojo) {
+            define(['./node-xml', '../../../core/deferredUtils'], moduleExport);
+        }
+        else if (isAmd) {//RequireJS probably
+            var def = define;
+            def(['./node-xml', '../../../core/deferredUtils'], moduleExport);
+        }
+        else {
+            module.exports = moduleExport(req('./node-xml'), req('../../../core/deferredUtils'));
+        }
+    }
 })();

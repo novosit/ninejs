@@ -163,13 +163,7 @@
 	}
 
 	if (isAmd) { //AMD
-		//Testing for dojo toolkit
-		if (isDojo) {
-			define(['dojo/text', './core/extend', './core/ext/Properties', './core/deferredUtils', './nineplate/DomProcessor', './nineplate/TextProcessor'], moduleExport);
-		} else {
-			//Trying for RequireJS and hopefully every other
-			define(['./core/text', './core/extend', './core/ext/Properties', './core/deferredUtils', './nineplate/DomProcessor', './nineplate/TextProcessor'], moduleExport);
-		}
+		define(['./core/text', './core/extend', './core/ext/Properties', './core/deferredUtils', './nineplate/DomProcessor', './nineplate/TextProcessor'], moduleExport);
 	} else if (isNode) { //Server side
 		module.exports = moduleExport(require('./nineplate/utils/node/text'), require('./core/extend'), require('./core/ext/Properties'), require('./core/deferredUtils'), require('./nineplate/DomProcessor'), require('./nineplate/TextProcessor'));
 	} else {
