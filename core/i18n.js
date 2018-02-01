@@ -7,9 +7,22 @@
 		path;
 
 	function moduleExport(extend, Evented, amdText, def) {
+        function isWebpackRunning() {
+            return typeof(process) !== 'undefined' && (process.env.npm_lifecycle_event === 'webpack');
+        }
 		function getFile(src, require, load, config) {
 			var obj;
-			if (isAmd) {
+            if (isWebpackRunning()) {
+            	var path = req('path');
+            	var idx = src.indexOf('!');
+            	src = src.substr(idx + 1);
+            	src = path.relative(__dirname, src);
+            	obj = req(src);
+                if (load) {
+                    load(obj);
+                }
+			}
+            else if (isAmd) {
 				obj = amdText.load(src, require, load, config);
 			}
 			else if (isNode) {
@@ -177,6 +190,13 @@
 		I18n = extend({
 			load: function(mid, require, load, config) {
 				getResource(mid, require, load, config);
+			},
+			pitch: function (filePath) {
+				return new Promise(function (resolve) {
+                    getResource(filePath, require, function (res) {
+                        resolve('module.exports = ' + JSON.stringify(res.loaded));
+                    }, {});
+				});
 			},
 			getResource: getResource
 		});
