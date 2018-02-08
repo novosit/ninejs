@@ -9,7 +9,6 @@ This is just an abstraction that detects if it's running in client side to retur
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && (define.amd.vendor === 'dojotoolkit.org');
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode)? global.require : require;
 	var nativePromise = typeof(Promise) === 'function';
 
 	function isPromise(valueOrPromise) {
@@ -182,9 +181,7 @@ This is just an abstraction that detects if it's running in client side to retur
 		define(['./extend', '../client/bluebird'], deferred);
 	} else if (isNode) { //Server side
 		var Q, extend;
-		Q = req('kew');
-		extend = req('./extend');
-		module.exports = deferred(extend, Q);
+		module.exports = deferred(require('./extend'), require('../client/bluebird'));
 	} else {
 		// plain script in a browser
 		global.ninejs.core.extend.mixinRecursive(global, { ninejs: { core: { deferredUtils: deferred(global.ninejs.core.extend, global.Q )}}});

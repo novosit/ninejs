@@ -7,7 +7,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode)? global.require : require;
 	function moduleExport(parser, deferredUtils, baseProcessor) {
 		var TextParseContext = baseProcessor.TextParseContext;
 		function makePutValue(expression, inFunctionCall, parseContext) {
@@ -313,18 +312,12 @@
 	}
 
 	if (isAmd) { //AMD
-		//Testing for dojo toolkit
-		if (isDojo) {
-			define(['./utils/parser/amd', '../core/deferredUtils', './BaseProcessor'], moduleExport);
-		} else {
-			//Trying for RequireJS and hopefully every other (Assuming text module is in 'text/text' btw)
-			define(['./utils/parser/amd', '../core/deferredUtils', './BaseProcessor'], moduleExport);
-		}
+		define(['./utils/parser/amd', '../core/deferredUtils', './BaseProcessor'], moduleExport);
 	} else if (isNode) { //Server side
 		var parser, deferredUtils, baseProcessor;
-		parser = req('./utils/parser/commonjs');
-		deferredUtils = req('../core/deferredUtils');
-		baseProcessor = req('./BaseProcessor');
+		parser = require('./utils/parser/commonjs');
+		deferredUtils = require('../core/deferredUtils');
+		baseProcessor = require('./BaseProcessor');
 		module.exports = moduleExport(parser, deferredUtils, baseProcessor);
 	} else {
 		// plain script in a browser

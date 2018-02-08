@@ -8,7 +8,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode) ? global.require : require;
 
 	/**
 	 config module
@@ -39,9 +38,9 @@
 			define(['./core/extend', './modules/config'], moduleExport);
 		}
 	} else if (isNode) { //Server side
-		module.exports = moduleExport(req('./core/extend'), req('./modules/config'));
+		module.exports = moduleExport(require('./core/extend'), require('./modules/config'));
 	} else {
 		// plain script in a browser
 		throw new Error('Non AMD environments are not supported');
 	}
-})(this);
+})((typeof(window) !== 'undefined')?window: this);

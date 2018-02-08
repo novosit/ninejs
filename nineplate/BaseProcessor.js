@@ -7,7 +7,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode) ? global.require : require;
 	function manualTrim(str) {
 		str = str.replace(/^\s+/, '');
 		for(var i = str.length - 1; i >= 0; i-= 1) {
@@ -176,16 +175,10 @@
 	}
 
 	if (isAmd) { //AMD
-		//Testing for dojo toolkit
-		if (isDojo) {
-			define(['./utils/node/xmlParser', '../core/extend'], moduleExport);
-		} else {
-			//Trying for RequireJS and hopefully every other (Assuming text module is in 'text/text' btw)
-			define(['./utils/node/xmlParser', '../core/extend'], moduleExport);
-		}
+		define(['./utils/node/xmlParser', '../core/extend'], moduleExport);
 	} else if (isNode) { //Server side
-		var xmlParser = req('./utils/node/xmlParser'),
-			extend = req('../core/extend');
+		var xmlParser = require('./utils/node/xmlParser'),
+			extend = require('../core/extend');
 		module.exports = moduleExport(xmlParser, extend);
 	} else {
 		// plain script in a browser

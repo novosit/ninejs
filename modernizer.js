@@ -11,6 +11,29 @@ A NineJS custom build of Modernizr
 })(function () {
 	'use strict';
 
+	function isWebpackRunning() {
+        return (typeof(process) !== 'undefined') && process.env && (process.env.npm_lifecycle_event === 'webpack');
+	}
+	if (isWebpackRunning()) {
+		function has() {
+
+		}
+		has.add = function () {
+
+		};
+		return has;
+	}
+	var fakeEl = {
+		style: {},
+		appendChild: function () {
+
+		},
+		removeChild: function () {
+
+		}
+	};
+	fakeEl.parentNode = fakeEl;
+
 	return (function() {
 
 
@@ -321,7 +344,7 @@ A NineJS custom build of Modernizr
 
 
 			tests['geolocation'] = function() {
-				return 'geolocation' in navigator;
+				return 'geolocation' in window.navigator;
 			};
 
 
@@ -2665,5 +2688,16 @@ A NineJS custom build of Modernizr
 		Modernizr.add('touch', 'ontouchstart' in document || window.navigator.msMaxTouchPoints > 0);
 
 		return Modernizr;
-	}).call(window);
+	}).call((typeof(window) !== 'undefined')?window:(this || {
+		document: {
+			body: fakeEl,
+			createElement: function () {
+				return fakeEl;
+			},
+			getElementById: function () {
+				return fakeEl;
+			}
+		},
+		navigator: {}
+	}));
 });

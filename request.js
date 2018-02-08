@@ -4,24 +4,23 @@ Dojo Toolkit's dojo/request as of jan 2014
 (function (factory) {
 	'use strict';
 	function isWebpackRunning() {
-        return typeof(process) !== 'undefined' && (process.env.npm_lifecycle_event === 'webpack');
+        return (typeof(process) !== 'undefined') && process.env && (process.env.npm_lifecycle_event === 'webpack');
 	}
-	var r = { req: require},
-		isAmd = typeof (define) === 'function' && define.amd,
+	var isAmd = typeof (define) === 'function' && define.amd,
 		isDojo = isAmd && (define.amd.vendor === 'dojotoolkit.org');
 	if (isWebpackRunning()) {
 		if (isAmd) {
             define(['reqwest/reqwest'], factory);
 		}
 		else {
-            module.exports = factory(r.req('reqwest/reqwest'));
+            module.exports = factory(require('reqwest/reqwest'));
 		}
 	}
 	else if (isAmd ) {
 		define(['reqwest/reqwest'], factory);
 	}
 	else if (typeof(exports) === 'object') {
-		module.exports = factory(r.req('request'));
+		module.exports = factory(require('reqwest/reqwest'));
 	}
 })(function (request) {
 	'use strict';

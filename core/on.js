@@ -644,10 +644,7 @@ Dojo Toolkit's dojo/on as of jan 2014
 
 	if (isAmd) { //AMD
 		define(['../modernizer', './aspect'], evented);
-	} else if (isNode) { //Server side
-		throw new Error('Node is not supported. You may want to use EventEmitter instead');
 	} else {
-		// plain script in a browser
-		throw new Error('Non AMD environments are not supported');
+		module.exports = evented(require('../modernizer'), require('./aspect'));
 	}
-})(this);
+})((typeof(window) !== 'undefined')?window:this);

@@ -6,8 +6,7 @@
 	'use strict';
 	var isAmd = (typeof(define) !== 'undefined') && define.amd,
 		isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org',
-		isNode = (typeof(window) === 'undefined'),
-		req = (isDojo && isNode)? global.require : require;
+		isNode = (typeof(window) === 'undefined');
 
 	function evented(on, aspect) {
 		var after = aspect.after;
@@ -26,20 +25,9 @@
 	}
 
 	if (isAmd) { //AMD
-		if (isNode) {
-			define(['events'], function(events) {
-				return events.EventEmitter;
-			});
-		}
-		else {
-			define(['../on', '../aspect'], evented);
-		}
-	} else if (isNode) { //Server side
-		//If it's node then Evented is the same as EventEmitter
-		var Evented = req('events').EventEmitter;
-		module.exports = Evented;
+		define(['../on', '../aspect'], evented);
 	} else {
-		// plain script in a browser
-		throw new Error('Non AMD environments are not supported');
+		//If it's node then Evented is the same as EventEmitter
+		module.exports = evented(require('../on'), require('../aspect'));
 	}
 })();

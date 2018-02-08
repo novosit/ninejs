@@ -7,7 +7,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode)? global.require : require;
 
 	/**
 	builds the Nineplate module
@@ -153,7 +152,7 @@
 			};
 			result.pitch = function (filePath) {
 				return new Promise(function (resolve) {
-					requireText.load(filePath, req, function (text) {
+					requireText.load(filePath, require, function (text) {
 						resolve(new Nineplate().buildTemplate(text).toAmd());
 					})
 				});

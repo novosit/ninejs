@@ -114,7 +114,7 @@
 		data = '\"' + result.join('\" + \n \"') + '\"';
 		functionBody += 'var result = ' + deepToString(cssResult, '\"') + ';\n';
 		functionBody += 'result.data = ' + data + '; \n';
-		functionBody += 'if (config.applicationUrl) { result.path = config.applicationUrl + result.path; }\n';
+		functionBody += 'var appUrl = config.ninejs && config.ninejs.applicationUrl;\nappUrl = appUrl || config[\'applicationUrl\'];\nif (appUrl) { result.path = appUrl + result.path; }\n';
 		functionBody += '\nreturn style.buildStyleObject(result);\n});';
 		if (noWrap) {
 			return functionBody;

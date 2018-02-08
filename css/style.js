@@ -10,6 +10,7 @@
     }
 })(function (extend) {
     'use strict';
+    var isAmd = typeof (define) === 'function' && define.amd;
     var ielt10 = (function () {
             /* global window */
             if(typeof(window) !== 'undefined' && window.navigator.appName.indexOf('Internet Explorer') !== -1){
@@ -17,6 +18,7 @@
             }
             return false;
         })(),
+        isWebpack = function () { return false; },
         ieNode,
         ieCssText,
         ieCssUpdating,
@@ -64,7 +66,7 @@
                 else {
                     newUrl = url;
                 }
-                if (isDojo && amdPrefix) {
+                if (!isWebpack() && isAmd && amdPrefix) {
                     //Tring to find AMD package
                     if (require.packs && require.packs[amdPrefix]) {
                         var amdPackage = require.packs[amdPrefix];

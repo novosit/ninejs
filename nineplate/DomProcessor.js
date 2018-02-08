@@ -7,7 +7,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode)? global.require : require;
 
 	/** 
 	@exports domProcessor
@@ -1273,7 +1272,7 @@
 		//Trying for RequireJS and hopefully every other (Assuming text module is in 'text/text' btw)
 		define(['./utils/functions', './utils/parser/amd', '../core/deferredUtils', './BaseProcessor', '../core/objUtils', './renderers/JavascriptRenderer'], moduleExport);
 	} else if (isNode) { //Server side
-		module.exports = moduleExport(req('./utils/functions'), req('./utils/parser/commonjs'), req('../core/deferredUtils'), req('./BaseProcessor'), req('../core/objUtils'), req('./renderers/JavascriptRenderer'));
+		module.exports = moduleExport(require('./utils/functions'), require('./utils/parser/commonjs'), require('../core/deferredUtils'), require('./BaseProcessor'), require('../core/objUtils'), require('./renderers/JavascriptRenderer'));
 	} else {
 		// plain script in a browser
 		throw new Error('Non AMD environments are not supported');

@@ -7,7 +7,6 @@
 	var isAmd = (typeof(define) !== 'undefined') && define.amd;
 	var isDojo = isAmd && define.amd.vendor === 'dojotoolkit.org';
 	var isNode = (typeof(window) === 'undefined');
-	var req = (isDojo && isNode)? global.require : require;
 
 	function moduleExport(objUtils) {
 		function render(obj) {
@@ -581,7 +580,7 @@
 		//Trying for RequireJS and hopefully every other
 		define(['../../core/objUtils'], moduleExport);
 	} else if (isNode) { //Server side
-		module.exports = moduleExport(req('../../core/objUtils'));
+		module.exports = moduleExport(require('../../core/objUtils'));
 	} else {
 		// plain script in a browser
 		throw new Error('Non AMD environments are not supported');

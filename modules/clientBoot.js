@@ -6,7 +6,7 @@ modules must have:
 	mid: 'ninejs/sampleModule' //The AMD moduleID
 }
 */
-define(['./config', './moduleRegistry', './Module', '../core/extend', '../core/deferredUtils', './client/router', './ninejs-client', './client/container', './client/singlePageContainer'], function(clientConfig, registry, Module, extend, deferredUtils) {
+define(['./config', './moduleRegistry', './Module', '../core/extend', '../core/deferredUtils', './clientManualBoot', './client/router', './ninejs-client', './client/container', './client/singlePageContainer'], function(clientConfig, registry, Module, extend, deferredUtils, clientManualBoot) {
 	'use strict';
 	var modules = clientConfig.modules || {},
 		moduleArray = [],
@@ -26,25 +26,8 @@ define(['./config', './moduleRegistry', './Module', '../core/extend', '../core/d
 	var moduleLoadPromise = deferredUtils.defer();
 	var r = { req: require };
 	r.req(moduleArray, function() {
-		var cnt,
-			current,
-			allUnitsCfg = {},
-			unitCfg;
-		for (cnt = 0; cnt < arguments.length; cnt += 1) {
-			registry.addModule(arguments[cnt]);
-		}
-		for (cnt = 0; cnt < arguments.length; cnt += 1) {
-			current = arguments[cnt];
-			unitCfg = modules[moduleArray[cnt]];
-			extend.mixinRecursive(allUnitsCfg, unitCfg);
-		}
-		extend.mixinRecursive(clientConfig, { units: {} });
-		extend.mixinRecursive(allUnitsCfg, clientConfig.units);
-		extend.mixinRecursive(clientConfig.units, allUnitsCfg);
-		for (cnt = 0; cnt < arguments.length; cnt += 1) {
-			current = arguments[cnt];
-			Module.prototype.enable.call(current, clientConfig.units);
-		}
+		var modules = Array.prototype.slice.call(arguments, 0);
+		clientManualBoot.init(modules);
 		moduleLoadPromise.resolve(true);
 	});
 	return deferredUtils.when(moduleLoadPromise.promise, function(){
