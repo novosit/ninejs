@@ -27,7 +27,7 @@
 		}
 		return src;
 	}
-	function moduleExport(dojoConfig) {
+	function moduleExport(extend, dojoConfig) {
 		function readConfigModules() {
 			var arr = njsConfig.modules;
 			if (arr) {
@@ -44,6 +44,7 @@
 			}
 		}
 		var config = {}, p, njs;
+		dojoConfig = dojoConfig || {};
 		if (dojoConfig && dojoConfig.ninejs){
 			njs = dojoConfig.ninejs;
 			for (var p in njs){
@@ -51,6 +52,10 @@
 					config[p] = njs[p];
 				}
 			}
+		}
+		if (global.ninejsConfig) {
+			njs = global.ninejsConfig.ninejs;
+			extend.mixinRecursive(config, njs);
 		}
 		if (isNode) {
 			var r = { req: req },
@@ -70,16 +75,16 @@
 	}
 	if (isAmd) {
 		if (isDojo) {
-			define(['dojo/_base/config'], moduleExport);
+			define(['../core/extend', 'dojo/_base/config'], moduleExport);
 		}
 		else {
-			define(['./empty'], moduleExport);
+			define(['../core/extend', './empty'], moduleExport);
 		}
 	}
 	else if (isNode) {
-		module.exports = moduleExport({}) || {};
+		module.exports = moduleExport(require('../core/extend'), {});
 	}
 	else {
 		global.config = moduleExport(global.ninejsConfig || {});
 	}
-})(this);
+})((typeof(window) !== 'undefined')?window:this);

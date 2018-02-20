@@ -1,3 +1,4 @@
+// ninejs/css/style
 (function (factory) {
     'use strict';
     var req = require,

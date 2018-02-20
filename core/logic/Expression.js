@@ -5,149 +5,161 @@
 represent it and evaluate it over a collection of data or a service.
 @exports ninejs/core/logic/Expression
 */
-(function () {
-	/* jshint strict: false */
-	//'use strict';
-	var isAmd = (typeof(define) !== 'undefined' && define.amd);
-	var isNode = (typeof(window) === 'undefined');
-	var req = require;
-	var arrayMap;
-	if (typeof(Array.prototype.map) === 'function') {
-		arrayMap = function(arr, itemFn) {
-			return Array.prototype.map.call(arr, itemFn);
-		};
+(function (factory) {
+	'use strict';
+	var isAmd = typeof (define) === 'function' && define.amd;
+	if (isAmd ) {
+		define([
+			'../extend', 
+			'../ext/Properties', 
+			'../objUtils', 
+			'./nls/Expression.js'
+		], factory);
 	}
-	else {
-		arrayMap = function(arr, itemFn) {
-			var r = [],
-				cnt,
-				len = arr.length;
-			for (cnt = 0; cnt < len; cnt += 1) {
-				r.push(itemFn(arr[cnt], cnt, arr));
-			}
-			return r;
-		};
+	else if (typeof(exports) === 'object') {
+		module.exports = factory(
+			require('../extend'), 
+			require('../ext/Properties'), 
+			require('../objUtils'), 
+			require('./nls/Expression.js')
+		);
 	}
-	var keys;
-	if (typeof(Object.keys) === 'function') {
-		keys = Object.keys;
-	}
-	else {
-		keys = function(obj) {
-			var r = [],
-				p;
-			for (p in obj) {
-				if (obj.hasOwnProperty(p)) {
-					r.push(p);
-				}
-			}
-			return r;
-		};
-	}
-	var arrayReduce;
-	if (typeof(Array.prototype.reduce) === 'function') {
-		arrayReduce = function(arr/*, callback, initial*/) {
-			return Array.prototype.reduce.apply(arr, Array.prototype.slice.call(arguments, 1));
-		};
-	}
-	else {
-		arrayReduce = function (arr, callback, initial) {
-			var cnt = 0,
-				len = arr.length;
-			if (initial === undefined) {
-				initial = arr[0];
-				cnt = 1;
-			}
-			for (; cnt < len; cnt += 1) {
-				initial = callback(initial, arr[cnt], cnt, arr);
-			}
-			return initial;
-		};
-	}
-
-	var initialOperatorList = {
-		'and':{
-			name: 'and',
-			reductor: function(a, b) {
-				return (!!a) && (!!b);
-			}
-		},
-		'or':{
-			name: 'or',
-			reductor: function(a, b) {
-				return (!!a) || (!!b);
-			}
-		},
-		'equals':{
-			name: 'equals',
-			'operator': function(a,b) { return a == b; }
-		},
-		'notEquals':{
-			name: 'notEquals',
-			'operator': function(a,b) { return a !== b; }
-		},
-		'greaterThan':{
-			name: 'greaterThan',
-			'operator': function(a,b) { return a > b; },
-			dataTypeList: [
-				'Number'
-			]
-		},
-		'greaterThanOrEquals':{
-			name: 'greaterThanOrEquals',
-			'operator': function(a,b) { return a >= b; },
-			dataTypeList: [
-				'Number'
-			]
-		},
-		'lessThan':{
-			name: 'lessThan',
-			'operator': function(a,b) { return a < b; },
-			dataTypeList: [
-				'Number'
-			]
-		},
-		'lessThanOrEquals':{
-			name: 'lessThanOrEquals',
-			'operator': function(a,b) { return a <= b; },
-			dataTypeList: [
-				'Number'
-			]
-		},
-		'contains':{
-			name: 'contains',
-			'operator': function(a,b) { return String.prototype.indexOf.call(a, b) >= 0; },
-			dataTypeList: [
-				'String'
-			]
-		},
-		'startsWith':{
-			name: 'startsWith',
-			'operator': function(a,b) {
-				if (a == null) {
-					return false;
-				}
-				return String.prototype.indexOf.call(a, b) === 0;
-			},
-			dataTypeList: [
-				'String'
-			]
-		},
-		'endsWith':{
-			name: 'endsWith',
-			'operator': function(a,b) {
-				if (a == null) {
-					return false;
-				}
-				return (a.length >= (b || '').length) && (String.prototype.indexOf.call(a, b) === (a.length - (b || '').length));
-			},
-			dataTypeList: [
-				'String'
-			]
+})(function (extend, Properties, objUtils, locale) {
+		var arrayMap;
+		if (typeof(Array.prototype.map) === 'function') {
+			arrayMap = function(arr, itemFn) {
+				return Array.prototype.map.call(arr, itemFn);
+			};
 		}
-	};
+		else {
+			arrayMap = function(arr, itemFn) {
+				var r = [],
+					cnt,
+					len = arr.length;
+				for (cnt = 0; cnt < len; cnt += 1) {
+					r.push(itemFn(arr[cnt], cnt, arr));
+				}
+				return r;
+			};
+		}
+		var keys;
+		if (typeof(Object.keys) === 'function') {
+			keys = Object.keys;
+		}
+		else {
+			keys = function(obj) {
+				var r = [],
+					p;
+				for (p in obj) {
+					if (obj.hasOwnProperty(p)) {
+						r.push(p);
+					}
+				}
+				return r;
+			};
+		}
+		var arrayReduce;
+		if (typeof(Array.prototype.reduce) === 'function') {
+			arrayReduce = function(arr/*, callback, initial*/) {
+				return Array.prototype.reduce.apply(arr, Array.prototype.slice.call(arguments, 1));
+			};
+		}
+		else {
+			arrayReduce = function (arr, callback, initial) {
+				var cnt = 0,
+					len = arr.length;
+				if (initial === undefined) {
+					initial = arr[0];
+					cnt = 1;
+				}
+				for (; cnt < len; cnt += 1) {
+					initial = callback(initial, arr[cnt], cnt, arr);
+				}
+				return initial;
+			};
+		}
 
-	function moduleExport(extend, Properties, objUtils, locale) {
+		var initialOperatorList = {
+			'and':{
+				name: 'and',
+				reductor: function(a, b) {
+					return (!!a) && (!!b);
+				}
+			},
+			'or':{
+				name: 'or',
+				reductor: function(a, b) {
+					return (!!a) || (!!b);
+				}
+			},
+			'equals':{
+				name: 'equals',
+				'operator': function(a,b) { return a == b; }
+			},
+			'notEquals':{
+				name: 'notEquals',
+				'operator': function(a,b) { return a !== b; }
+			},
+			'greaterThan':{
+				name: 'greaterThan',
+				'operator': function(a,b) { return a > b; },
+				dataTypeList: [
+					'Number'
+				]
+			},
+			'greaterThanOrEquals':{
+				name: 'greaterThanOrEquals',
+				'operator': function(a,b) { return a >= b; },
+				dataTypeList: [
+					'Number'
+				]
+			},
+			'lessThan':{
+				name: 'lessThan',
+				'operator': function(a,b) { return a < b; },
+				dataTypeList: [
+					'Number'
+				]
+			},
+			'lessThanOrEquals':{
+				name: 'lessThanOrEquals',
+				'operator': function(a,b) { return a <= b; },
+				dataTypeList: [
+					'Number'
+				]
+			},
+			'contains':{
+				name: 'contains',
+				'operator': function(a,b) { return String.prototype.indexOf.call(a, b) >= 0; },
+				dataTypeList: [
+					'String'
+				]
+			},
+			'startsWith':{
+				name: 'startsWith',
+				'operator': function(a,b) {
+					if (a == null) {
+						return false;
+					}
+					return String.prototype.indexOf.call(a, b) === 0;
+				},
+				dataTypeList: [
+					'String'
+				]
+			},
+			'endsWith':{
+				name: 'endsWith',
+				'operator': function(a,b) {
+					if (a == null) {
+						return false;
+					}
+					return (a.length >= (b || '').length) && (String.prototype.indexOf.call(a, b) === (a.length - (b || '').length));
+				},
+				dataTypeList: [
+					'String'
+				]
+			}
+		};
 		var resources = locale.resource,
 			isArray = objUtils.isArray,
 			isFunction = objUtils.isFunction,
@@ -860,12 +872,4 @@ represent it and evaluate it over a collection of data or a service.
 		});
 
 		return Expression;
-	}
-	if (isAmd) { //AMD
-		define(['../extend', '../ext/Properties', '../objUtils', '../i18n!./nls/Expression.json'], moduleExport);
-	} else if (isNode) { //Server side
-		module.exports = moduleExport(req('../extend'), req('../ext/Properties'), req('../objUtils'), req('../i18n').getResource(req('path').resolve(__dirname, './nls/Expression.json'), req));
-	} else {
-		throw new Error('environment not supported');
-	}
-})(this);
+	});

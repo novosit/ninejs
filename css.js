@@ -128,7 +128,10 @@
             var baseUrl = filePath;
             var sourcePath = filePath;
             var cssPrefixes = {};
-            return cssBuilder.buildAppender(text, path.relative(baseUrl || '', sourcePath).split('\\').join('/'), sourcePath, cssPrefixes || {}, path.dirname(sourcePath), {}, true)
+            var result = cssBuilder.buildAppender(text, path.relative(__dirname, baseUrl || '').split('\\').join('/'), sourcePath, cssPrefixes || {}, path.dirname(sourcePath), {}, true);
+            // console.log('ninejs/css pitch ' + filePath);
+            // console.log(result);
+            return result;
         }
         return new Promise(function (resolve) {
             if (isUrl(filePath)) {

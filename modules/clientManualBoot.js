@@ -10,11 +10,8 @@
         	'./moduleRegistry', 
         	'./Module', 
         	'../core/extend', 
-        	'../core/deferredUtils', 
-        	'./client/router', 
-        	'./ninejs-client', 
-        	'./client/container', 
-        	'./client/singlePageContainer'
+        	'../core/deferredUtils',
+        	'./ninejs-client'
         ], factory);
 	}
 	else {
@@ -23,23 +20,23 @@
         	require('./moduleRegistry'), 
         	require('./Module'), 
         	require('../core/extend'), 
-        	require('../core/deferredUtils'), 
-        	require('./client/router'), 
-        	require('./ninejs-client'), 
-        	require('./client/container'), 
-        	require('./client/singlePageContainer')
+        	require('../core/deferredUtils'),
+        	require('./ninejs-client')
         );
 	}
-})(function (clientConfig, registry, Module, extend, def, router, client, container, singlePageContainer) {
+})(function (clientConfig, registry, Module, extend, def, client) {
 	'use strict';
 	return {
 		init: function (dependencies) {
 			var cnt,
 				current,
 				allUnitsCfg = {},
-				unitCfg;
-			var modules = ((clientConfig.ninejs || {}).ninejs || {}).modules || {},
+				unitCfg,
+				tempConfig = (clientConfig.ninejs || clientConfig || {});
+
+			var modules = (tempConfig.ninejs || tempConfig || {}).modules || {},
 			moduleArray = [];
+			registry.addModule(client);
 			for (var p in modules) {
 				if (modules.hasOwnProperty(p)) {
 					moduleArray.push(p);
@@ -56,10 +53,7 @@
 			extend.mixinRecursive(clientConfig, { units: {} });
 			extend.mixinRecursive(allUnitsCfg, clientConfig.units);
 			extend.mixinRecursive(clientConfig.units, allUnitsCfg);
-			for (cnt = 0; cnt < dependencies.length; cnt += 1) {
-				current = modules[cnt];
-				Module.prototype.enable.call(current, clientConfig.units);
-			}
+			return Promise.resolve(true);
 		},
 		enableModules: function () {
 			return registry.enableModules();

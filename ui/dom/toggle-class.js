@@ -6,7 +6,7 @@
 		define(['../../core/on', '../utils/setClass', '../../core/objUtils'], factory);
 	}
 	else if (typeof(exports) === 'object') {
-		module.exports = factory.apply(null, ['../../core/on', '../utils/setClass', '../../core/objUtils'].map(req));
+		module.exports = factory(require('../../core/on'), require('../utils/setClass'), require('../../core/objUtils'));
 	}
 })(function (on, setClass, objUtils) {
 	'use strict';

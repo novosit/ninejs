@@ -174,7 +174,10 @@
 				});
 				return resourceSet;
 			}
-			if (!load) {
+			if (typeof(src) === 'object') {
+				return rest(src);
+			}
+			else if (!load) {
 				obj = getFile(src, require, load, config);
 				return rest(obj);
 			}
@@ -194,9 +197,23 @@
 			pitch: function (filePath) {
 				return new Promise(function (resolve) {
                     getResource(filePath, require, function (res) {
-                        resolve('module.exports = ' + JSON.stringify(res.loaded));
+                    	var r = 'module.exports = ' + JSON.stringify(res.loaded) + ';\n';
+                    	r += 'module.exports.getResource = ' + (function (name) {
+                    		if (!name) {
+                    			return this.root;
+                    		}
+                    		if (typeof(this[name]) === 'object') {
+                    			return this[name];
+                    		}
+                    		return this.root;
+                    	}).toString() + ';';
+                        resolve(r);
                     }, {});
 				});
+			},
+			pitchSync: function (filePath) {
+				var res = getResource(filePath, require);
+				return 'module.exports = ' + JSON.stringify(res.loaded);
 			},
 			getResource: getResource
 		});
