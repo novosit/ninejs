@@ -29,7 +29,7 @@ Dojo Toolkit's dojo/on as of jan 2014
 					}
 				};
 			}
-			else if (window.dojo.query) {
+			else if (window.dojo && window.dojo.query) {
 				return window.dojo.query;
 			}
 			else if (window.document && window.document.body && window.document.body.querySelectorAll) {
