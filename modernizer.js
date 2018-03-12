@@ -15,9 +15,9 @@ A NineJS custom build of Modernizr
         return (typeof(process) !== 'undefined') && process.env && (process.env.npm_lifecycle_event === 'webpack');
 	}
 	if (isWebpackRunning()) {
-		function has() {
+		var has = function () {
 
-		}
+		};
 		has.add = function () {
 
 		};
