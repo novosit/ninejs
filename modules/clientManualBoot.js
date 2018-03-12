@@ -53,7 +53,9 @@
 			extend.mixinRecursive(clientConfig, { units: {} });
 			extend.mixinRecursive(allUnitsCfg, clientConfig.units);
 			extend.mixinRecursive(clientConfig.units, allUnitsCfg);
-			return Promise.resolve(true);
+			var ret = def.defer();
+			ret.resolve(true);
+			return ret.promise;
 		},
 		enableModules: function () {
 			return registry.enableModules();

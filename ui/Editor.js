@@ -101,11 +101,18 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		if (!modernizer.inputtypes.number) {
 			numberTextBoxDefer = def.defer();
 			NumberTextBox = numberTextBoxDefer.promise;
-			require([numberTextBoxImpl], function (C) {
-				NumberTextBox = C;
-				numberTextBoxDefer.resolve(C);
+			if (typeof(numberTextBoxImpl) === 'function') {
+				NumberTextBox = numberTextBoxImpl;
+				numberTextBoxDefer.resolve(numberTextBoxImpl);
 				numberTextBoxDefer = null;
-			});
+			}
+			else {
+				require([numberTextBoxImpl], function (C) {
+					NumberTextBox = C;
+					numberTextBoxDefer.resolve(C);
+					numberTextBoxDefer = null;
+				});
+			}
 			if (!NumberTextBox) {
 				throw new Error('Implementation for NumberTextBox: ' + numberTextBoxImpl + ' must be previously loaded.');
 			}
@@ -151,11 +158,18 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			dateTextBoxDefer = def.defer();
 			DateTextBox = dateTextBoxDefer.promise;
 			setTimeout(function () {
-				require([dateTextBoxImpl], function (C) {
-					DateTextBox = C;
-					dateTextBoxDefer.resolve(C);
+				if (typeof(dateTextBoxImpl) === 'function') {
+					DateTextBox = dateTextBoxImpl;
+					dateTextBoxDefer.resolve(dateTextBoxImpl);
 					dateTextBoxDefer = null;
-				});
+				}
+				else {
+					require([dateTextBoxImpl], function (C) {
+						DateTextBox = C;
+						dateTextBoxDefer.resolve(C);
+						dateTextBoxDefer = null;
+					});
+				}
 			});
 			if (!DateTextBox) {
 				throw new Error('Implementation for DateTextBox: ' + dateTextBoxImpl + ' must be previously loaded.');
@@ -185,11 +199,18 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			timeTextBoxDefer = def.defer();
 			TimeTextBox = timeTextBoxDefer.promise;
 			setTimeout(function () {
-				require([timeTextBoxImpl], function (C) {
-					TimeTextBox = C;
-					timeTextBoxDefer.resolve(C);
+				if (typeof(timeTextBoxImpl) === 'function') {
+					TimeTextBox = timeTextBoxImpl;
+					timeTextBoxDefer.resolve(timeTextBoxImpl);
 					timeTextBoxDefer = null;
-				});
+				}
+				else {
+					require([timeTextBoxImpl], function (C) {
+						TimeTextBox = C;
+						timeTextBoxDefer.resolve(C);
+						timeTextBoxDefer = null;
+					});
+				}
 			});
 			if (!TimeTextBox) {
 				throw new Error('Implementation for TimeTextBox: ' + timeTextBoxImpl + ' must be previously loaded.');

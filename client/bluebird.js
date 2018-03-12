@@ -27,7 +27,12 @@
  * Features enabled: core, race, call_get, generators, map, nodeify, promisify, props, reduce, settle, some, cancel, using, filter, any, each, timers
  */
 !function (e) {
-	if ("object" == typeof exports && "undefined" != typeof module)module.exports = e(); else if ("function" == typeof define && define.amd)define([], e); else {
+	if ("object" == typeof exports && "undefined" != typeof module) { 
+		module.exports = e();
+		if (("undefined" !== typeof window) && ("undefined" === typeof window.Promise)) {
+			window.Promise = module.exports;
+		}
+	 } else if ("function" == typeof define && define.amd)define([], e); else {
 		var f;
 		"undefined" != typeof window ? f = window : "undefined" != typeof global ? f = global : "undefined" != typeof self && (f = self), f.Promise = e()
 	}
