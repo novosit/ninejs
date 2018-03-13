@@ -25,9 +25,6 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		Select,
 		TimeTextBox,
 		ControlBase,
-		numberTextBoxImpl = editorConfig.NumberTextBox || 'dijit/form/NumberTextBox',
-		dateTextBoxImpl = editorConfig.DateTextBox || 'dijit/form/DateTextBox',
-		timeTextBoxImpl = editorConfig.TimeTextBox || 'dijit/form/TimeTextBox',
 		ENTER = 13;
 	var pad = '00';
 	function padTime(str) {
@@ -101,18 +98,21 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 		if (!modernizer.inputtypes.number) {
 			numberTextBoxDefer = def.defer();
 			NumberTextBox = numberTextBoxDefer.promise;
-			if (typeof(numberTextBoxImpl) === 'function') {
-				NumberTextBox = numberTextBoxImpl;
-				numberTextBoxDefer.resolve(numberTextBoxImpl);
-				numberTextBoxDefer = null;
-			}
-			else {
-				require([numberTextBoxImpl], function (C) {
-					NumberTextBox = C;
-					numberTextBoxDefer.resolve(C);
+			setTimeout(function () {
+				var numberTextBoxImpl = editorConfig.NumberTextBox || 'dijit/form/NumberTextBox';
+				if (typeof(numberTextBoxImpl) === 'function') {
+					NumberTextBox = numberTextBoxImpl;
+					numberTextBoxDefer.resolve(numberTextBoxImpl);
 					numberTextBoxDefer = null;
-				});
-			}
+				}
+				else {
+					require([numberTextBoxImpl], function (C) {
+						NumberTextBox = C;
+						numberTextBoxDefer.resolve(C);
+						numberTextBoxDefer = null;
+					});
+				}
+			});
 			if (!NumberTextBox) {
 				throw new Error('Implementation for NumberTextBox: ' + numberTextBoxImpl + ' must be previously loaded.');
 			}
@@ -158,6 +158,7 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			dateTextBoxDefer = def.defer();
 			DateTextBox = dateTextBoxDefer.promise;
 			setTimeout(function () {
+				var dateTextBoxImpl = editorConfig.DateTextBox || 'dijit/form/DateTextBox';
 				if (typeof(dateTextBoxImpl) === 'function') {
 					DateTextBox = dateTextBoxImpl;
 					dateTextBoxDefer.resolve(dateTextBoxImpl);
@@ -199,6 +200,7 @@ define(['../core/extend', './Widget', './Skins/Editor/Default', '../core/deferre
 			timeTextBoxDefer = def.defer();
 			TimeTextBox = timeTextBoxDefer.promise;
 			setTimeout(function () {
+				var timeTextBoxImpl = editorConfig.TimeTextBox || 'dijit/form/TimeTextBox';
 				if (typeof(timeTextBoxImpl) === 'function') {
 					TimeTextBox = timeTextBoxImpl;
 					timeTextBoxDefer.resolve(timeTextBoxImpl);
