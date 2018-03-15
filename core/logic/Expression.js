@@ -160,7 +160,7 @@ represent it and evaluate it over a collection of data or a service.
 				]
 			}
 		};
-		var resources = locale.resource,
+		var resources = locale.root,
 			isArray = objUtils.isArray,
 			isFunction = objUtils.isFunction,
 			isString = objUtils.isString,
